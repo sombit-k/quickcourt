@@ -19,7 +19,6 @@ export default function UserSync() {
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             profileImage: user.imageUrl || null,
-            // Get role from user metadata if it exists (from custom signup)
             role: user.unsafeMetadata?.role || null
           }
           
