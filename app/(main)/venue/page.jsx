@@ -38,9 +38,9 @@ const page = () => {
           getAvailableLocations()
         ]);
         
-        setVenues(venuesData);
-        setAvailableSports(sportsData);
-        setAvailableLocations(locationsData);
+        setVenues(Array.isArray(venuesData) ? venuesData : []);
+        setAvailableSports(Array.isArray(sportsData) ? sportsData : []);
+        setAvailableLocations(Array.isArray(locationsData) ? locationsData : []);
         setError(null);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -64,7 +64,7 @@ const page = () => {
       
       if (!hasFilters) {
         const allVenues = await getAllVenues(sortBy);
-        setVenues(allVenues);
+        setVenues(Array.isArray(allVenues) ? allVenues : []);
       } else {
         const filters = {
           searchQuery: searchQuery.trim(),
@@ -76,7 +76,7 @@ const page = () => {
         };
 
         const searchResults = await searchVenues(filters);
-        setVenues(searchResults);
+        setVenues(Array.isArray(searchResults) ? searchResults : []);
       }
       
       setCurrentPage(1); // Reset to first page
@@ -126,7 +126,7 @@ const page = () => {
     try {
       setSearchLoading(true);
       const allVenues = await getAllVenues('rating');
-      setVenues(allVenues);
+      setVenues(Array.isArray(allVenues) ? allVenues : []);
       setCurrentPage(1);
       setError(null);
     } catch (err) {
@@ -214,11 +214,11 @@ const page = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Locations</SelectItem>
-                      {availableLocations.map((location) => (
+                      {availableLocations?.map((location) => (
                         <SelectItem key={location.city} value={location.city}>
                           {location.label}
                         </SelectItem>
-                      ))}
+                      )) || null}
                     </SelectContent>
                   </Select>
                 </div>
@@ -248,7 +248,7 @@ const page = () => {
                     Sports ({selectedSports.length} selected)
                   </label>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {availableSports.map((sport) => (
+                    {availableSports?.map((sport) => (
                       <div key={sport} className="flex items-center space-x-2">
                         <Checkbox
                           id={sport}
@@ -332,7 +332,7 @@ const page = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {currentVenues.map((venue) => (
+                {currentVenues?.map((venue) => (
                   <Card key={venue.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
                     <div className="relative">
                       <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -341,12 +341,19 @@ const page = () => {
                             src={venue.images[0]} 
                             alt={venue.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
                           />
-                        ) : (
+                        ) : null}
+                        <div 
+                          className={`w-full h-full flex items-center justify-center ${venue.images && venue.images.length > 0 ? 'hidden' : 'flex'}`}
+                        >
                           <span className="text-white text-4xl font-bold opacity-50">
                             {venue.name.charAt(0)}
                           </span>
-                        )}
+                        </div>
                       </div>
                       <button className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-50">
                         <Heart className="w-4 h-4 text-gray-600" />
@@ -371,21 +378,21 @@ const page = () => {
                       </p>
                       
                       <div className="flex flex-wrap gap-1 mb-3">
-                        {venue.sportsTypes.slice(0, 2).map((sport) => (
+                        {venue.sportsTypes?.slice(0, 2).map((sport) => (
                           <Badge key={sport} variant="secondary" className="text-xs capitalize">
                             {sport}
                           </Badge>
-                        ))}
-                        {venue.sportsTypes.length > 2 && (
+                        )) || null}
+                        {venue.sportsTypes && venue.sportsTypes.length > 2 && (
                           <Badge variant="outline" className="text-xs">
                             +{venue.sportsTypes.length - 2} more
                           </Badge>
                         )}
-                        {venue.amenities.slice(0, 1).map((amenity) => (
+                        {venue.amenities?.slice(0, 1).map((amenity) => (
                           <Badge key={amenity} variant="outline" className="text-xs">
                             {amenity}
                           </Badge>
-                        ))}
+                        )) || null}
                       </div>
                       
                       <div className="flex items-center justify-between">

@@ -213,3 +213,62 @@ export async function unbanUser(userId) {
     throw new Error('Failed to unban user')
   }
 }
+
+export async function getCurrentUser(clerkId) {
+  try {
+    if (!clerkId) {
+      throw new Error('User not authenticated')
+    }
+
+    const user = await db.user.findUnique({
+      where: { clerkId },
+      select: {
+        id: true,
+        clerkId: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        fullName: true,
+        avatar: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+        bookings: {
+          include: {
+            court: {
+              include: {
+                facility: true
+              }
+            }
+          },
+          orderBy: {
+            bookingDate: 'desc'
+          }
+        }
+      }
+    })
+
+    // If user doesn't exist in our database, return a minimal user object
+    // This can happen if the user just signed up and hasn't been synced yet
+    if (!user) {
+      return {
+        id: null,
+        clerkId,
+        email: null,
+        firstName: null,
+        lastName: null,
+        fullName: null,
+        avatar: null,
+        phone: null,
+        role: 'USER',
+        createdAt: new Date(),
+        bookings: []
+      }
+    }
+
+    return user
+  } catch (error) {
+    console.error('Error fetching current user:', error)
+    throw new Error('Failed to fetch user profile')
+  }
+}

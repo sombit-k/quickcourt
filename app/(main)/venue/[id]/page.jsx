@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { Star, Clock, MapPin, Phone, Mail, Globe, Car, Wifi, Coffee, Users, Camera, Calendar, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,6 +111,10 @@ const DUMMY_VENUE_DATA = {
 };
 
 const VenueDetailPage = ({ params }) => {
+  // Unwrap the params promise using React.use()
+  const resolvedParams = use(params);
+  const venueId = resolvedParams.id;
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -127,21 +131,31 @@ const VenueDetailPage = ({ params }) => {
         
         // Try to fetch real data from database
         try {
-          const venueData = await getVenueById(params.id);
+          const venueData = await getVenueById(venueId);
           
           // Transform database data to match our component structure
           const transformedVenue = {
             ...venueData,
-            images: venueData.images.length > 0 ? venueData.images : ['/api/placeholder/400/300'],
-            amenities: venueData.amenities.map(amenity => ({
+            images: (venueData.images && venueData.images.length > 0) ? venueData.images : ['/api/placeholder/400/300'],
+            amenities: (venueData.amenities || []).map(amenity => ({
               name: amenity,
               icon: getAmenityIcon(amenity),
               available: true
             })),
             operatingHours: venueData.operatingHours || DUMMY_VENUE_DATA.operatingHours,
-            reviews: venueData.reviewsData.map(review => ({
+            reviews: (venueData.reviewsData || []).map(review => ({
               ...review,
               date: formatDate(review.createdAt)
+            })),
+            // Transform courts to match the expected structure
+            courts: (venueData.courts || []).map(court => ({
+              id: court.id,
+              name: court.name,
+              type: court.sportType.charAt(0).toUpperCase() + court.sportType.slice(1), // Convert to proper case
+              pricePerHour: court.pricePerHour,
+              features: court.images && court.images.length > 0 
+                ? ['Professional Court', 'Good Lighting'] 
+                : ['Standard Court']
             }))
           };
           
@@ -160,7 +174,7 @@ const VenueDetailPage = ({ params }) => {
     };
 
     fetchVenueData();
-  }, [params.id]);
+  }, [venueId]);
 
   // Helper function to get amenity icons
   const getAmenityIcon = (amenityName) => {
@@ -192,15 +206,19 @@ const VenueDetailPage = ({ params }) => {
   };
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === venue.images.length - 1 ? 0 : prev + 1
-    );
+    if (venue?.images && venue.images.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === venue.images.length - 1 ? 0 : prev + 1
+      );
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? venue.images.length - 1 : prev - 1
-    );
+    if (venue?.images && venue.images.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? venue.images.length - 1 : prev - 1
+      );
+    }
   };
 
   const timeSlots = [
@@ -297,7 +315,7 @@ const VenueDetailPage = ({ params }) => {
                 <div className="relative">
                   <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
                     <img 
-                      src={venue.images[currentImageIndex]} 
+                      src={(venue.images && venue.images.length > 0) ? venue.images[currentImageIndex] : '/api/placeholder/400/300'} 
                       alt={`${venue.name} - Image ${currentImageIndex + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -318,13 +336,13 @@ const VenueDetailPage = ({ params }) => {
                     
                     {/* Image Counter */}
                     <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                      {currentImageIndex + 1} / {venue.images.length}
+                      {currentImageIndex + 1} / {(venue.images || []).length}
                     </div>
                   </div>
                   
                   {/* Thumbnail Navigation */}
                   <div className="flex gap-2 mt-4">
-                    {venue.images.map((image, index) => (
+                    {(venue.images || []).map((image, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
@@ -357,7 +375,7 @@ const VenueDetailPage = ({ params }) => {
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Amenities</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {venue.amenities.map((amenity, index) => (
+                  {(venue.amenities || []).map((amenity, index) => (
                     <div 
                       key={index}
                       className={`flex items-center gap-3 p-3 rounded-lg ${
@@ -378,7 +396,7 @@ const VenueDetailPage = ({ params }) => {
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Court Options</h2>
                 <div className="space-y-4">
-                  {venue.courts.map((court) => (
+                  {(venue.courts || []).map((court) => (
                     <div key={court.id} className="border rounded-lg p-4 hover:border-blue-300 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <div>
@@ -391,11 +409,16 @@ const VenueDetailPage = ({ params }) => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        {court.features.map((feature, index) => (
+                        {(court.features || []).map((feature, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {feature}
                           </Badge>
                         ))}
+                        {(!court.features || court.features.length === 0) && (
+                          <Badge variant="secondary" className="text-xs">
+                            Standard Court
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -416,7 +439,7 @@ const VenueDetailPage = ({ params }) => {
                 </div>
                 
                 <div className="space-y-4">
-                  {venue.reviews.map((review) => (
+                  {(venue.reviews || []).map((review) => (
                     <div key={review.id} className="border-b border-gray-100 pb-4 last:border-b-0">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -457,7 +480,7 @@ const VenueDetailPage = ({ params }) => {
                     Operating Hours
                   </h3>
                   <div className="space-y-2 text-sm">
-                    {Object.entries(venue.operatingHours).map(([day, hours]) => (
+                    {Object.entries(venue.operatingHours || {}).map(([day, hours]) => (
                       <div key={day} className="flex justify-between">
                         <span className="text-gray-600">{day}</span>
                         <span className="font-medium">{hours}</span>
