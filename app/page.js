@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,105 @@ import { Search, MapPin, Star, ChevronLeft, ChevronRight, Users, Trophy, Clock, 
 import { motion } from "framer-motion";
 
 const LandingPage = () => {
+  // Autocomplete states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const searchInputRef = useRef(null);
+
+  // Sample venues/locations data for autocomplete
+  const venuesSuggestions = [
+    { name: "Elite Badminton Center", location: "Koramangala, Bangalore", type: "venue" },
+    { name: "Pro Basketball Arena", location: "Indiranagar, Bangalore", type: "venue" },
+    { name: "Tennis Academy", location: "Whitefield, Bangalore", type: "venue" },
+    { name: "Football Turf", location: "HSR Layout, Bangalore", type: "venue" },
+    { name: "Cricket Ground", location: "MG Road, Bangalore", type: "venue" },
+    { name: "Swimming Pool Complex", location: "Jayanagar, Bangalore", type: "venue" },
+    { name: "Badminton Courts", location: "Ahmedabad, Gujarat", type: "venue" },
+    { name: "Tennis Club", location: "Mumbai, Maharashtra", type: "venue" },
+    { name: "Sports Complex", location: "Delhi, NCR", type: "venue" },
+    { name: "Fitness Center", location: "Pune, Maharashtra", type: "venue" },
+    // Location suggestions
+    { name: "Bangalore", location: "Karnataka", type: "city" },
+    { name: "Ahmedabad", location: "Gujarat", type: "city" },
+    { name: "Mumbai", location: "Maharashtra", type: "city" },
+    { name: "Delhi", location: "NCR", type: "city" },
+    { name: "Pune", location: "Maharashtra", type: "city" },
+    { name: "Chennai", location: "Tamil Nadu", type: "city" },
+    { name: "Hyderabad", location: "Telangana", type: "city" },
+    { name: "Kolkata", location: "West Bengal", type: "city" },
+  ];
+
+  // Handle input change and filter suggestions
+  useEffect(() => {
+    if (searchQuery.length > 0) {
+      const filtered = venuesSuggestions.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.location.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+      setFilteredSuggestions([]);
+    }
+    setActiveSuggestion(-1);
+  }, [searchQuery]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!showSuggestions) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestion(prev => 
+        prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestion(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeSuggestion >= 0) {
+        selectSuggestion(filteredSuggestions[activeSuggestion]);
+      } else {
+        handleSearch();
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveSuggestion(-1);
+    }
+  };
+
+  // Handle suggestion selection
+  const selectSuggestion = (suggestion) => {
+    setSearchQuery(suggestion.name);
+    setShowSuggestions(false);
+    setActiveSuggestion(-1);
+    // You can add navigation logic here
+    console.log('Selected:', suggestion);
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    console.log('Searching for:', searchQuery);
+    // Add search logic here
+    setShowSuggestions(false);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const venues = [
     {
       id: 1,
@@ -95,7 +194,7 @@ const LandingPage = () => {
     <div className="min-h-screen bg-black overflow-hidden">
       {/* Hero Section with Vortex Background */}
       <section className="relative h-screen">
-        {/* <VortexDemo /> */}
+        <VortexDemo />
         
         {/* Hero Content Overlay */}
         <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -149,10 +248,11 @@ const LandingPage = () => {
             </motion.div>
           </div>
         </div>
+        
       </section>
 
       {/* Search Section with Wavy Background */}
-      {/* <section className="relative py-20">
+      <section className="relative py-20">
         <WavyBackground className="max-w-4xl mx-auto pb-40">
           <div className="relative z-10 px-6">
             <motion.div 
@@ -162,25 +262,90 @@ const LandingPage = () => {
               className="text-center mb-12"
             >
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                Find Your Game
+                Find Your Venue 
+                {/* Implement an auto complete feature at "Find your venue"  */}
               </h2>
               <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                Search for the best sports venues and players near you
+                Search for the best sports venues near you
               </p>
             </motion.div>
 
             <div className="relative">
               <CardSpotlight className="p-8 max-w-2xl mx-auto">
                 <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <div className="flex-1 relative" ref={searchInputRef}>
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
                     <input
                       type="text"
-                      placeholder="Enter location (e.g., Ahmedabad)"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Enter location or venue name..."
                       className="w-full pl-10 pr-4 py-4 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
                     />
+                    
+                    {/* Autocomplete Suggestions Dropdown */}
+                    {showSuggestions && filteredSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-md border border-gray-600 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                        {filteredSuggestions.map((suggestion, index) => (
+                          <div
+                            key={index}
+                            onClick={() => selectSuggestion(suggestion)}
+                            className={`px-4 py-3 cursor-pointer transition-colors border-b border-gray-700 last:border-b-0 ${
+                              index === activeSuggestion
+                                ? 'bg-blue-600/20 text-white'
+                                : 'text-gray-300 hover:bg-gray-800/50 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex-shrink-0">
+                                {suggestion.type === 'venue' ? (
+                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                                    <span className="text-white text-sm font-bold">V</span>
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center">
+                                    <MapPin className="w-4 h-4 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm">{suggestion.name}</div>
+                                <div className="text-xs text-gray-400 truncate">
+                                  {suggestion.location}
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  suggestion.type === 'venue' 
+                                    ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' 
+                                    : 'bg-green-600/20 text-green-400 border border-green-600/30'
+                                }`}>
+                                  {suggestion.type === 'venue' ? 'Venue' : 'City'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* No results message */}
+                    {showSuggestions && searchQuery.length > 0 && filteredSuggestions.length === 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-md border border-gray-600 rounded-xl shadow-xl z-50">
+                        <div className="px-4 py-6 text-center text-gray-400">
+                          <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No venues or cities found</p>
+                          <p className="text-xs mt-1">Try searching for "Bangalore", "Mumbai", or venue names</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-xl font-semibold">
+                  <Button 
+                    onClick={handleSearch}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
+                  >
+                    <Search className="w-4 h-4" />
                     Search Venues
                   </Button>
                 </div>
@@ -188,7 +353,7 @@ const LandingPage = () => {
             </div>
           </div>
         </WavyBackground>
-      </section> */}
+      </section>
 
       {/* Book Venues Section */}
       <section className="py-20 px-4 bg-gradient-to-b from-gray-900 to-black">
