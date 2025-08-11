@@ -45,12 +45,13 @@ const SignUpPage = () => {
     }
 
     try {
-      // Create the signup with minimal options to avoid CAPTCHA
+      // Create the signup with CAPTCHA explicitly disabled
       const result = await signUp.create({
         firstName,
         lastName,
         emailAddress,
         password,
+        captcha: 'none',
         unsafeMetadata: {
           role: role
         }
