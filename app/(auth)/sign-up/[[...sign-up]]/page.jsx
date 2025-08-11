@@ -27,23 +27,26 @@ const SignUpPage = () => {
     
     if (!isLoaded) return
 
+    // Reset errors
+    setErrors({})
+
     // Validate passwords match
     if (password !== confirmPassword) {
       setErrors({ confirmPassword: 'Passwords do not match' })
       return
     }
 
-    // Validate password requirements (8-20 chars, uppercase, number, special char)
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$/
-    if (!passwordRegex.test(password)) {
+    // Simplified password validation - just require 8+ characters
+    if (password.length < 8) {
       setErrors({ 
-        password: 'Password must be 8-20 characters with at least one uppercase letter, one number, and one special symbol'
+        password: 'Password must be at least 8 characters long'
       })
       return
     }
 
     try {
-      await signUp.create({
+      // Create the signup with minimal options to avoid CAPTCHA
+      const result = await signUp.create({
         firstName,
         lastName,
         emailAddress,
@@ -53,14 +56,42 @@ const SignUpPage = () => {
         }
       })
 
-      // Send the email verification code
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+      // If signup is complete (no email verification required), sign in immediately
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId })
+        router.push('/')
+        return
+      }
 
-      // Change the UI to our pending section
+      // Otherwise, prepare email verification
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
       setPendingVerification(true)
+      
     } catch (err) {
-      console.error(JSON.stringify(err, null, 2))
-      setErrors({ general: err.errors?.[0]?.longMessage || 'An error occurred' })
+      console.error('Signup error:', err)
+      
+      // Handle specific error types
+      if (err.errors) {
+        const errorMessages = {}
+        err.errors.forEach(error => {
+          switch (error.code) {
+            case 'form_identifier_exists':
+              errorMessages.email = 'This email is already registered'
+              break
+            case 'form_password_pwned':
+              errorMessages.password = 'This password has been compromised. Please choose a different one.'
+              break
+            case 'form_password_length_too_short':
+              errorMessages.password = 'Password is too short'
+              break
+            default:
+              errorMessages.general = error.longMessage || error.message || 'An error occurred'
+          }
+        })
+        setErrors(errorMessages)
+      } else {
+        setErrors({ general: 'An unexpected error occurred. Please try again.' })
+      }
     }
   }
 
@@ -153,7 +184,7 @@ const SignUpPage = () => {
                 required
               >
                 <option value="">Select Role</option>
-                <option value="player">Player / Facility Owner</option>
+                <option value="player">Player</option>
                 <option value="facility">Facility Owner</option>
               </select>
             </div>
@@ -194,7 +225,11 @@ const SignUpPage = () => {
                 onChange={(e) => setEmailAddress(e.target.value)}
                 required
                 className="mt-1"
+                placeholder="Enter your email"
               />
+              {errors.email && (
+                <p className="text-red-600 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -207,12 +242,13 @@ const SignUpPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1"
+                placeholder="Enter your password"
               />
               {errors.password && (
                 <p className="text-red-600 text-sm mt-1">{errors.password}</p>
               )}
               <p className="text-gray-500 text-xs mt-1">
-                Use 8-20 characters with at least one uppercase letter, one number, and one special symbol like @ or #
+                Must be at least 8 characters long
               </p>
             </div>
 
@@ -226,6 +262,7 @@ const SignUpPage = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="mt-1"
+                placeholder="Confirm your password"
               />
               {errors.confirmPassword && (
                 <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import  Link  from 'next/link'
 
 const SignInPage = () => {
   const { isLoaded, signIn, setActive } = useSignIn()
@@ -15,7 +16,7 @@ const SignInPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!isLoaded) return
 
     try {
@@ -37,7 +38,7 @@ const SignInPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 w-100">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -98,6 +99,11 @@ const SignInPage = () => {
                 Sign Up
               </a>
             </span>
+          </div>
+          <div className='flex justify-center'>
+            <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+              Forgot Password?
+            </Link>
           </div>
         </form>
       </div>

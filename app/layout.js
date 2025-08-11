@@ -13,7 +13,7 @@ export const metadata = {
     template: '%s | QUICKCOURT',
     default: 'QUICKCOURT',
   },
-  description: 'Easily manage your sports booking with QUICKCOURT.',
+  description: 'Easily manage your sports venue booking with QUICKCOURT.',
 };
 
 export default function RootLayout({ children }) {
