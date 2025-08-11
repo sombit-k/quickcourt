@@ -29,8 +29,27 @@ model User {
   reviews       Review[]
   reports       Report[]   @relation("ReportedBy")
   reportTargets Report[]   @relation("ReportTarget")
+  roleRequests  RoleRequest[]
 
   @@map("users")
+}
+
+model RoleRequest {
+  id              String            @id @default(uuid())
+  requestedRole   UserRole
+  reason          String?
+  status          RoleRequestStatus @default(PENDING)
+  adminComments   String?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  userId     String
+  user       User   @relation(fields: [userId], references: [id])
+
+  @@map("role_requests")
 }
 
 model Facility {
@@ -238,4 +257,10 @@ enum ReportStatus {
   UNDER_REVIEW
   RESOLVED
   DISMISSED
+}
+
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

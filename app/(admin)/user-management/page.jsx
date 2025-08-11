@@ -19,7 +19,9 @@ import {
   Calendar,
   MapPin,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Building,
+  Settings
 } from 'lucide-react'
 import { getAllUsers, toggleUserStatus, getUserBookingHistory } from '@/actions/admin-actions'
 
@@ -250,6 +252,36 @@ export default function UserManagement() {
         <p className="text-gray-600 mt-2">Manage users, roles, and access permissions</p>
       </div>
 
+      {/* Quick Navigation */}
+      <div className="mb-8">
+        <div className="flex flex-wrap gap-4">
+          <Link href="/facility-approval">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              Facility Approval
+            </Button>
+          </Link>
+          <Link href="/user-management">
+            <Button variant="default" className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              User Management
+            </Button>
+          </Link>
+          <Link href="/role-requests">
+            <Button variant="outline" className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Role Requests
+            </Button>
+          </Link>
+          <Link href="/dashboard">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Search and Filters */}
       <Card className="mb-8">
         <CardContent className="pt-6">
@@ -271,7 +303,6 @@ export default function UserManagement() {
                 <SelectItem value="ALL">All Roles</SelectItem>
                 <SelectItem value="USER">Users</SelectItem>
                 <SelectItem value="FACILITY_OWNER">Facility Owners</SelectItem>
-                <SelectItem value="ADMIN">Administrators</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

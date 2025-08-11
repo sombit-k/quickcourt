@@ -8,9 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Loader2, User, Mail, Phone, Save, X, RefreshCw, Settings, UserCheck } from 'lucide-react'
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Loader2, User, Mail, Phone, Save, X, RefreshCw, Settings, UserCheck, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { getCurrentUser, syncUser } from '@/actions/user-sync'
 import { updateUserProfile } from '@/actions/profile-actions'
+import { submitRoleRequest, getUserRoleRequests } from '@/actions/role-request-actions'
+import { toast } from 'sonner'
 import Link from 'next/link'
 
 const EditProfilePage = () => {
@@ -24,6 +28,13 @@ const EditProfilePage = () => {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [roleRequests, setRoleRequests] = useState([])
+  const [showRoleRequestForm, setShowRoleRequestForm] = useState(false)
+  const [roleRequestForm, setRoleRequestForm] = useState({
+    requestedRole: '',
+    reason: ''
+  })
+  const [submittingRoleRequest, setSubmittingRoleRequest] = useState(false)
 
   // Form data
   const [profileForm, setProfileForm] = useState({
@@ -58,6 +69,9 @@ const EditProfilePage = () => {
             phone: userData.phone || '',
             role: userData.role || 'USER'
           })
+
+          // Load user's role requests
+          await loadRoleRequests()
         } catch (err) {
           console.error('Error fetching user data:', err)
           setError('Failed to load user profile')
@@ -131,6 +145,99 @@ const EditProfilePage = () => {
       setError('Failed to update profile')
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Load user's role requests
+  const loadRoleRequests = async () => {
+    try {
+      const result = await getUserRoleRequests()
+      if (result.success) {
+        setRoleRequests(result.data)
+      }
+    } catch (err) {
+      console.error('Error loading role requests:', err)
+    }
+  }
+
+  // Handle role change (show role request form if needed)
+  const handleRoleChange = (value) => {
+    if (value !== userData?.role && value === 'FACILITY_OWNER') {
+      // Check if there's already a pending request
+      const pendingRequest = roleRequests.find(
+        req => req.requestedRole === 'FACILITY_OWNER' && req.status === 'PENDING'
+      )
+      
+      if (pendingRequest) {
+        toast.info('You already have a pending request for Facility Owner role')
+        return
+      }
+
+      // Show role request form
+      setRoleRequestForm({
+        requestedRole: 'FACILITY_OWNER',
+        reason: ''
+      })
+      setShowRoleRequestForm(true)
+    } else {
+      // For USER role, update directly (downgrade)
+      setProfileForm(prev => ({ ...prev, role: value }))
+    }
+  }
+
+  // Submit role request
+  const handleRoleRequestSubmit = async (e) => {
+    e.preventDefault()
+    setSubmittingRoleRequest(true)
+
+    try {
+      const result = await submitRoleRequest(
+        roleRequestForm.requestedRole,
+        roleRequestForm.reason
+      )
+
+      if (result.success) {
+        toast.success('Role request submitted successfully!', {
+          description: 'An admin will review your request and get back to you.'
+        })
+        setShowRoleRequestForm(false)
+        setRoleRequestForm({ requestedRole: '', reason: '' })
+        await loadRoleRequests() // Refresh role requests
+      } else {
+        toast.error(result.message)
+      }
+    } catch (err) {
+      toast.error('Failed to submit role request')
+    } finally {
+      setSubmittingRoleRequest(false)
+    }
+  }
+
+  // Get status badge color
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return 'default'
+      case 'APPROVED':
+        return 'default'
+      case 'REJECTED':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
+  // Get status icon
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return <Clock className="w-3 h-3" />
+      case 'APPROVED':
+        return <CheckCircle className="w-3 h-3" />
+      case 'REJECTED':
+        return <XCircle className="w-3 h-3" />
+      default:
+        return null
     }
   }
 
@@ -244,7 +351,7 @@ const EditProfilePage = () => {
                     <p>User ID: {userData?.id || 'Not synced'}</p>
                     <p>Clerk ID: {clerkUser?.id}</p>
                     <p>Role: {userData?.role || 'USER'}</p>
-                    <p>Verified: {userData?.isVerified ? '✅' : '❌'}</p>
+                    {/* <p>Verified: {userData?.isVerified ? '✅' : '❌'}</p> */}
                   </div>
                 </div>
               </div>
@@ -322,7 +429,7 @@ const EditProfilePage = () => {
                     <Label htmlFor="role">Account Type</Label>
                     <Select 
                       value={profileForm.role} 
-                      onValueChange={(value) => setProfileForm(prev => ({ ...prev, role: value }))}
+                      onValueChange={(value) => handleRoleChange(value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select account type" />
@@ -330,11 +437,10 @@ const EditProfilePage = () => {
                       <SelectContent>
                         <SelectItem value="USER">Regular User</SelectItem>
                         <SelectItem value="FACILITY_OWNER">Facility Owner</SelectItem>
-                        <SelectItem value="ADMIN">Administrator</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Choose your account type. Facility owners can manage sports facilities.
+                      Want to become a facility owner? Submit a request for admin approval.
                     </p>
                   </div>
 
@@ -447,8 +553,141 @@ const EditProfilePage = () => {
               </CardContent>
             </Card>
 
+            {/* Role Requests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <UserCheck className="w-5 h-5 mr-2" />
+                  Role Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {roleRequests.length > 0 ? (
+                    <div className="space-y-3">
+                      {roleRequests.map((request) => (
+                        <div key={request.id} className="p-4 border rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">
+                                  {request.requestedRole === 'FACILITY_OWNER' ? 'Facility Owner' : request.requestedRole}
+                                </h4>
+                                <Badge variant={getStatusBadgeColor(request.status)} className="flex items-center gap-1">
+                                  {getStatusIcon(request.status)}
+                                  {request.status}
+                                </Badge>
+                              </div>
+                              {request.reason && (
+                                <p className="text-sm text-gray-600">
+                                  <strong>Reason:</strong> {request.reason}
+                                </p>
+                              )}
+                              {request.adminComments && (
+                                <p className="text-sm text-gray-600">
+                                  <strong>Admin Comments:</strong> {request.adminComments}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-500">
+                                Submitted on {new Date(request.createdAt).toLocaleDateString()}
+                                {request.reviewedAt && (
+                                  <> • Reviewed on {new Date(request.reviewedAt).toLocaleDateString()}</>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">
+                      No role requests submitted yet.
+                    </p>
+                  )}
+                  
+                  {userData?.role === 'USER' && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const pendingRequest = roleRequests.find(
+                            req => req.requestedRole === 'FACILITY_OWNER' && req.status === 'PENDING'
+                          )
+                          
+                          if (pendingRequest) {
+                            toast.info('You already have a pending request for Facility Owner role')
+                            return
+                          }
+
+                          setRoleRequestForm({
+                            requestedRole: 'FACILITY_OWNER',
+                            reason: ''
+                          })
+                          setShowRoleRequestForm(true)
+                        }}
+                        className="w-full"
+                      >
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Request Facility Owner Role
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
+
+        {/* Role Request Modal */}
+        {showRoleRequestForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4">
+                Request {roleRequestForm.requestedRole === 'FACILITY_OWNER' ? 'Facility Owner' : roleRequestForm.requestedRole} Role
+              </h3>
+              <form onSubmit={handleRoleRequestSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="reason">Reason for Request *</Label>
+                  <Textarea
+                    id="reason"
+                    value={roleRequestForm.reason}
+                    onChange={(e) => setRoleRequestForm(prev => ({ ...prev, reason: e.target.value }))}
+                    placeholder="Please explain why you want to become a facility owner..."
+                    rows={4}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Provide details about your experience and why you want this role.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowRoleRequestForm(false)
+                      setRoleRequestForm({ requestedRole: '', reason: '' })
+                    }}
+                    disabled={submittingRoleRequest}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={submittingRoleRequest || !roleRequestForm.reason.trim()}>
+                    {submittingRoleRequest ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Request'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

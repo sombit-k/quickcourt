@@ -237,6 +237,12 @@ export default function FacilityApproval() {
               User Management
             </Button>
           </Link>
+          <Link href="/role-requests">
+            <Button variant="outline" className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Role Requests
+            </Button>
+          </Link>
           <Link href="/dashboard">
             <Button variant="outline" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />

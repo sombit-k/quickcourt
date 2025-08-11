@@ -1,15 +1,4 @@
 'use client'
-// import { 
-//   DollarSign, 
-//   Building2, 
-//   Building,
-//   Calendar, 
-//   TrendingUp, 
-//   Clock,
-//   UserCheck,
-//   Settings
-// } from 'lucide-react';
-
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -96,6 +85,12 @@ export default function AdminDashboard() {
             <Button variant="outline" className="flex items-center gap-2">
               <UserCheck className="h-4 w-4" />
               User Management
+            </Button>
+          </Link>
+          <Link href="/role-requests">
+            <Button variant="outline" className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Role Requests
             </Button>
           </Link>
           <Link href="/dashboard">
