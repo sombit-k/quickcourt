@@ -18,19 +18,18 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider 
+    <ClerkProvider
       appearance={{
-        signUp: {
-          elements: {
-            formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-          }
+        elements: {
+          formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
         }
       }}
-      signUpUrl="/sign-up"
-      signInUrl="/sign-in"
     >
       <html lang="en">
         <body className={`${inter.className} antialiased  `}>
+          {/* Hidden div to prevent Clerk CAPTCHA warning */}
+          <div id="clerk-captcha" style={{display: 'none'}}></div>
+          
           <UserSync />
           
           <NavbarDemo />

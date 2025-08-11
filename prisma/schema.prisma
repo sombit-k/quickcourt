@@ -8,33 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  clerkId       String   @unique
-  email         String   @unique
-  firstName     String
-  lastName      String
-  fullName      String?
-  avatar        String?
-  role          UserRole @default(USER)
-  phone         String?
-  isVerified    Boolean  @default(false)
-  isBanned      Boolean  @default(false)
-  lastLogin     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String    @id @default(cuid())
+  clerkId    String    @unique
+  email      String    @unique
+  firstName  String
+  lastName   String
+  fullName   String?
+  avatar     String?
+  role       UserRole  @default(USER)
+  phone      String?
+  isVerified Boolean   @default(false)
+  isBanned   Boolean   @default(false)
+  lastLogin  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
   bookings      Booking[]
   facilities    Facility[]
   reviews       Review[]
-  reports       Report[] @relation("ReportedBy")
-  reportTargets Report[] @relation("ReportTarget")
+  reports       Report[]   @relation("ReportedBy")
+  reportTargets Report[]   @relation("ReportTarget")
 
   @@map("users")
 }
 
 model Facility {
-  id              String           @id @default(cuid())
+  id              String         @id @default(cuid())
   name            String
   description     String?
   address         String
@@ -44,46 +44,46 @@ model Facility {
   phone           String?
   email           String?
   website         String?
-  sportsTypes     String           // JSON array of sports supported
-  amenities       String?          // JSON array of amenities
-  images          String?          // JSON array of image URLs
-  operatingHours  String?          // JSON object with daily hours
-  status          FacilityStatus   @default(PENDING)
+  sportsTypes     String // JSON array of sports supported
+  amenities       String? // JSON array of amenities
+  images          String? // JSON array of image URLs
+  operatingHours  String? // JSON object with daily hours
+  status          FacilityStatus @default(PENDING)
   rejectionReason String?
-  rating          Float?           @default(0)
-  totalReviews    Int              @default(0)
-  isActive        Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  rating          Float?         @default(0)
+  totalReviews    Int            @default(0)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   // Relations
-  ownerId         String
-  owner           User             @relation(fields: [ownerId], references: [id])
-  courts          Court[]
-  bookings        Booking[]
-  reviews         Review[]
-  reports         Report[]
-  blockedSlots    BlockedTimeSlot[]
+  ownerId      String
+  owner        User              @relation(fields: [ownerId], references: [id])
+  courts       Court[]
+  bookings     Booking[]
+  reviews      Review[]
+  reports      Report[]
+  blockedSlots BlockedTimeSlot[]
 
   @@map("facilities")
 }
 
 model Court {
-  id            String   @id @default(cuid())
-  name          String
-  sportType     String   // "badminton", "tennis", "basketball", etc.
-  pricePerHour  Float
-  description   String?
-  images        String?  // JSON array of court-specific images
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  sportType    String // "badminton", "tennis", "basketball", etc.
+  pricePerHour Float
+  description  String?
+  images       String? // JSON array of court-specific images
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  facilityId    String
-  facility      Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  bookings      Booking[]
-  blockedSlots  BlockedTimeSlot[]
+  facilityId   String
+  facility     Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+  blockedSlots BlockedTimeSlot[]
 
   @@map("courts")
 }
@@ -91,9 +91,9 @@ model Court {
 model Booking {
   id            String        @id @default(cuid())
   bookingDate   DateTime
-  startTime     String        // "09:00"
-  endTime       String        // "10:00"
-  duration      Int           // in hours
+  startTime     String // "09:00"
+  endTime       String // "10:00"
+  duration      Int // in hours
   pricePerHour  Float
   totalPrice    Float
   status        BookingStatus @default(CONFIRMED)
@@ -104,29 +104,29 @@ model Booking {
   updatedAt     DateTime      @updatedAt
 
   // Relations
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
-  facilityId    String
-  facility      Facility      @relation(fields: [facilityId], references: [id])
-  courtId       String
-  court         Court         @relation(fields: [courtId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  courtId    String
+  court      Court    @relation(fields: [courtId], references: [id])
 
   @@map("bookings")
 }
 
 model Review {
   id          String   @id @default(cuid())
-  rating      Int      // 1-5 stars
+  rating      Int // 1-5 stars
   comment     String?
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  facilityId  String
-  facility    Facility @relation(fields: [facilityId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
 
   @@unique([userId, facilityId])
   @@map("reviews")
@@ -135,18 +135,18 @@ model Review {
 model BlockedTimeSlot {
   id          String   @id @default(cuid())
   date        DateTime
-  startTime   String   // "09:00"
-  endTime     String   // "10:00"
-  reason      String   // "maintenance", "private_event", etc.
+  startTime   String // "09:00"
+  endTime     String // "10:00"
+  reason      String // "maintenance", "private_event", etc.
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  facilityId  String?
-  facility    Facility? @relation(fields: [facilityId], references: [id])
-  courtId     String?
-  court       Court?    @relation(fields: [courtId], references: [id])
+  facilityId String?
+  facility   Facility? @relation(fields: [facilityId], references: [id])
+  courtId    String?
+  court      Court?    @relation(fields: [courtId], references: [id])
 
   @@map("blocked_time_slots")
 }
@@ -163,25 +163,25 @@ model Report {
 
   // Relations
   reportedById String
-  reportedBy   User         @relation("ReportedBy", fields: [reportedById], references: [id])
+  reportedBy   User      @relation("ReportedBy", fields: [reportedById], references: [id])
   targetUserId String?
-  targetUser   User?        @relation("ReportTarget", fields: [targetUserId], references: [id])
+  targetUser   User?     @relation("ReportTarget", fields: [targetUserId], references: [id])
   facilityId   String?
-  facility     Facility?    @relation(fields: [facilityId], references: [id])
+  facility     Facility? @relation(fields: [facilityId], references: [id])
 
   @@map("reports")
 }
 
 model Analytics {
-  id             String   @id @default(cuid())
-  date           DateTime
-  totalBookings  Int      @default(0)
-  totalRevenue   Float    @default(0)
-  newUsers       Int      @default(0)
-  activeFacilities Int    @default(0)
-  popularSports  String?  // JSON object with sport counts
-  peakHours      String?  // JSON object with hourly booking counts
-  createdAt      DateTime @default(now())
+  id               String   @id @default(cuid())
+  date             DateTime
+  totalBookings    Int      @default(0)
+  totalRevenue     Float    @default(0)
+  newUsers         Int      @default(0)
+  activeFacilities Int      @default(0)
+  popularSports    String? // JSON object with sport counts
+  peakHours        String? // JSON object with hourly booking counts
+  createdAt        DateTime @default(now())
 
   @@unique([date])
   @@map("analytics")
