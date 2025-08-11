@@ -24,7 +24,7 @@ export function NavbarDemo() {
     const navItems = [
         {
             name: "Book",
-            link: "/book",
+            link: "/venue",
         },
         // {
         //     name: "All tickets",

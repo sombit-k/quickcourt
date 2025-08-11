@@ -33,7 +33,7 @@ const page = () => {
       try {
         setLoading(true);
         const [venuesData, sportsData, locationsData] = await Promise.all([
-          getAllVenues(),
+          getAllVenues(sortBy),
           getAvailableSports(),
           getAvailableLocations()
         ]);
@@ -51,7 +51,7 @@ const page = () => {
     };
 
     loadInitialData();
-  }, []);
+  }, [sortBy]);
 
   // Search and filter function
   const handleSearch = useCallback(async () => {
@@ -59,17 +59,26 @@ const page = () => {
       setSearchLoading(true);
       setError(null);
       
-      const filters = {
-        searchQuery: searchQuery.trim(),
-        location: selectedLocation,
-        sports: selectedSports,
-        venueType,
-        priceRange,
-        sortBy
-      };
+      // If no filters are applied, get all venues with current sort
+      const hasFilters = searchQuery.trim() || selectedLocation || selectedSports.length > 0 || priceRange || venueType;
+      
+      if (!hasFilters) {
+        const allVenues = await getAllVenues(sortBy);
+        setVenues(allVenues);
+      } else {
+        const filters = {
+          searchQuery: searchQuery.trim(),
+          location: selectedLocation,
+          sports: selectedSports,
+          venueType,
+          priceRange,
+          sortBy
+        };
 
-      const searchResults = await searchVenues(filters);
-      setVenues(searchResults);
+        const searchResults = await searchVenues(filters);
+        setVenues(searchResults);
+      }
+      
       setCurrentPage(1); // Reset to first page
     } catch (err) {
       console.error('Error searching venues:', err);
@@ -88,7 +97,14 @@ const page = () => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedLocation, selectedSports, venueType, priceRange, sortBy, loading, handleSearch]);
+  }, [searchQuery, selectedLocation, selectedSports, venueType, priceRange, loading, handleSearch]);
+
+  // Separate effect for sort changes (immediate, no debounce)
+  useEffect(() => {
+    if (!loading && !searchLoading) {
+      handleSearch();
+    }
+  }, [sortBy]);
 
   const handleSportChange = (sport, checked) => {
     if (checked) {
@@ -98,13 +114,27 @@ const page = () => {
     }
   };
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
     setSearchQuery('');
     setSelectedLocation('');
     setSelectedSports([]);
     setPriceRange('');
     setVenueType('');
     setSortBy('rating');
+    
+    // Load all venues after clearing filters
+    try {
+      setSearchLoading(true);
+      const allVenues = await getAllVenues('rating');
+      setVenues(allVenues);
+      setCurrentPage(1);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading venues:', err);
+      setError('Failed to load venues. Please try again.');
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   // Pagination
@@ -204,10 +234,10 @@ const page = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Prices</SelectItem>
-                      <SelectItem value="0-500">₹ 0 - 500</SelectItem>
-                      <SelectItem value="500-1000">₹ 500 - 1000</SelectItem>
-                      <SelectItem value="1000-2000">₹ 1000 - 2000</SelectItem>
-                      <SelectItem value="2000-">₹ 2000+</SelectItem>
+                      <SelectItem value="0-500">₹0 - ₹500</SelectItem>
+                      <SelectItem value="500-1000">₹500 - ₹1000</SelectItem>
+                      <SelectItem value="1000-2000">₹1000 - ₹2000</SelectItem>
+                      <SelectItem value="2000+">₹2000+</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
