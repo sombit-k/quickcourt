@@ -1,11 +1,12 @@
 "use client";
+
 import { useSignUp } from '@clerk/nextjs'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { EyeIcon, EyeOffIcon, Upload } from 'lucide-react'
 
 const SignUpPage = () => {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -19,6 +20,9 @@ const SignUpPage = () => {
   const [pendingVerification, setPendingVerification] = useState(false)
   const [code, setCode] = useState('')
   const [errors, setErrors] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   // Handle the submission of the sign-up form
@@ -27,93 +31,94 @@ const SignUpPage = () => {
     
     if (!isLoaded) return
 
+    setLoading(true)
     // Reset errors
     setErrors({})
 
     // Validate passwords match
     if (password !== confirmPassword) {
       setErrors({ confirmPassword: 'Passwords do not match' })
+      setLoading(false)
       return
     }
 
-    // Simplified password validation - just require 8+ characters
-    if (password.length < 8) {
-      setErrors({ 
-        password: 'Password must be at least 8 characters long'
-      })
+    // Validate role is selected
+    if (!role) {
+      setErrors({ role: 'Please select a role' })
+      setLoading(false)
       return
     }
 
     try {
-      // Create the signup without triggering CAPTCHA
-      const result = await signUp.create({
-        firstName,
-        lastName,
+      // Create the signup
+      await signUp.create({
+        firstName: firstName,
+        lastName: lastName,
         emailAddress,
         password,
-        unsafeMetadata: {
-          role: role
-        }
       })
 
-      // If signup is complete (no email verification required), sign in immediately
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId })
-        router.push('/')
-        return
-      }
-
-      // Otherwise, prepare email verification
+      // Send email verification
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
       setPendingVerification(true)
+      setLoading(false)
       
     } catch (err) {
       console.error('Signup error:', err)
+      setLoading(false)
       
-      // Handle specific error types
-      if (err.errors) {
+      if (err.errors && Array.isArray(err.errors)) {
         const errorMessages = {}
         err.errors.forEach(error => {
-          switch (error.code) {
-            case 'form_identifier_exists':
-              errorMessages.email = 'This email is already registered'
-              break
-            case 'form_password_pwned':
-              errorMessages.password = 'This password has been compromised. Please choose a different one.'
-              break
-            case 'form_password_length_too_short':
-              errorMessages.password = 'Password is too short'
-              break
-            default:
-              errorMessages.general = error.longMessage || error.message || 'An error occurred'
+          if (error.meta?.paramName === 'email_address') {
+            errorMessages.email = error.longMessage || 'Email error'
+          } else if (error.meta?.paramName === 'password') {
+            errorMessages.password = error.longMessage || 'Password error'
+          } else {
+            errorMessages.general = error.longMessage || error.message || 'An error occurred'
           }
         })
         setErrors(errorMessages)
       } else {
-        setErrors({ general: 'An unexpected error occurred. Please try again.' })
+        setErrors({ general: err.message || 'An unexpected error occurred. Please try again.' })
       }
     }
   }
 
-  // Handle the submission of the verification form
+  // Handle verification
   const onPressVerify = async (e) => {
     e.preventDefault()
     if (!isLoaded) return
+
+    setLoading(true)
 
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code,
       })
-      if (completeSignUp.status !== 'complete') {
-        console.log(JSON.stringify(completeSignUp, null, 2))
-      }
+      
       if (completeSignUp.status === 'complete') {
+        // Update user metadata after successful verification
+        try {
+          await completeSignUp.update({
+            publicMetadata: {
+              role: role
+            }
+          })
+        } catch (metaError) {
+          console.warn('Failed to update metadata:', metaError)
+        }
+        
         await setActive({ session: completeSignUp.createdSessionId })
-        router.push('/')
+        router.push('/home')
+      } else {
+        setErrors({ code: 'Verification failed. Please try again.' })
       }
+      setLoading(false)
     } catch (err) {
-      console.error(JSON.stringify(err, null, 2))
+      console.error('Verification error:', err)
       setErrors({ code: err.errors?.[0]?.longMessage || 'Invalid verification code' })
+      setLoading(false)
     }
   }
 
@@ -129,201 +134,242 @@ const SignUpPage = () => {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            QUICKCOURT
-          </h2>
-          <h3 className="mt-2 text-center text-xl font-bold text-gray-900">
-            SIGN UP
-          </h3>
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 ">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
+      </div>
+    )
+  }
 
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 w-400">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
         {!pendingVerification ? (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900">QUICKCOURT</h2>
+              <h3 className="text-xl font-semibold text-gray-800 mt-4">SIGN UP</h3>
+            </div>
+
             {errors.general && (
-              <div className="text-red-600 text-sm text-center">{errors.general}</div>
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                {errors.general}
+              </div>
             )}
 
-            {/* Profile Picture */}
-            <div className="flex flex-col items-center space-y-2">
-              <Label htmlFor="profile-picture">Profile Picture</Label>
-              <div className="w-20 h-20 rounded-full border-2 border-gray-300 flex items-center justify-center overflow-hidden">
-                {profileImage ? (
-                  <img 
-                    src={URL.createObjectURL(profileImage)} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Profile Picture */}
+              <div className="flex flex-col items-center">
+                <Label className="text-sm font-medium text-gray-700 mb-3">Profile Picture</Label>
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full border-2 border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                    {profileImage ? (
+                      <img 
+                        src={URL.createObjectURL(profileImage)} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Upload className="w-8 h-8 text-gray-400" />
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 rounded-full"></div>
+                </div>
+                {errors.image && (
+                  <p className="text-red-500 text-xs mt-1">{errors.image}</p>
                 )}
               </div>
-              <input
-                id="profile-picture"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              {errors.image && (
-                <p className="text-red-600 text-sm">{errors.image}</p>
-              )}
-            </div>
 
-            {/* Role Selection */}
-            <div>
-              <Label htmlFor="role">Sign up as</Label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="">Select Role</option>
-                <option value="player">Player</option>
-                <option value="facility">Facility Owner</option>
-              </select>
-            </div>
-
-            {/* Full Name */}
-            <div className="grid grid-cols-2 gap-4">
+              {/* Role Selection */}
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Sign up as</Label>
+                <div className="relative">
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-gray-700"
+                    required
+                  >
+                    <option value="">Player / Facility Owner</option>
+                    <option value="USER">Player</option>
+                    <option value="FACILITY_OWNER">Facility Owner</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                {errors.role && (
+                  <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+                )}
+              </div>
+
+              {/* First Name */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">First Name</Label>
                 <Input
-                  id="firstName"
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your first name"
                   required
-                  className="mt-1"
                 />
               </div>
+
+              {/* Last Name */}
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Last Name</Label>
                 <Input
-                  id="lastName"
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your last name"
                   required
-                  className="mt-1"
                 />
               </div>
-            </div>
 
-            {/* Email */}
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                required
-                className="mt-1"
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="text-red-600 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
+              {/* Email */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Email</Label>
+                <Input
+                  type="email"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your email"
+                  required
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
+              </div>
 
-            {/* Password */}
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1"
-                placeholder="Enter your password"
-              />
-              {errors.password && (
-                <p className="text-red-600 text-sm mt-1">{errors.password}</p>
-              )}
-              <p className="text-gray-500 text-xs mt-1">
-                Must be at least 8 characters long
-              </p>
-            </div>
+              {/* Password */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3"
+                  >
+                    {showPassword ? (
+                      <EyeOffIcon className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                )}
+              </div>
 
-            {/* Confirm Password */}
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="mt-1"
-                placeholder="Confirm your password"
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>
-              )}
-            </div>
+              {/* Confirm Password */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Confirm your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOffIcon className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
 
-            {/* Submit Button */}
-            <div>
+              {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors duration-200"
               >
-                Sign Up
+                {loading ? 'Creating Account...' : 'Sign Up'}
               </Button>
-            </div>
 
-            <div className="text-center">
-              <span className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <a href="/sign-in" className="font-medium text-blue-600 hover:text-blue-500">
-                  Log In
-                </a>
-              </span>
-            </div>
-          </form>
-        ) : (<>
-          <form onSubmit={onPressVerify} className="mt-8 space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 text-center">
-                Check your email
-              </h3>
-              <p className="text-sm text-gray-600 text-center mt-2">
+              {/* Sign In Link */}
+              <div className="text-center">
+                <span className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <a href="/sign-in" className="font-medium text-blue-600 hover:text-blue-500">
+                    Log In
+                  </a>
+                </span>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            {/* Verification Form */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900">QUICKCOURT</h2>
+              <h3 className="text-xl font-semibold text-gray-800 mt-4">Check your email</h3>
+              <p className="text-sm text-gray-600 mt-2">
                 We sent a verification code to {emailAddress}
               </p>
             </div>
-            
-            <div>
-              <Label htmlFor="code">Verification Code</Label>
-              <Input
-                id="code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter verification code"
-                className="mt-1"
-              />
-              {errors.code && (
-                <p className="text-red-600 text-sm mt-1">{errors.code}</p>
-              )}
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Verify and Continue
-            </Button>
-          </form>
-          <form onSubmit={onPressVerify} className="mt-8 space-y-6">
-              <Button>Resend Code</Button>
-          </form>
-        </>
+            <form onSubmit={onPressVerify} className="space-y-6">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Verification Code</Label>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest"
+                  placeholder="Enter verification code"
+                  required
+                />
+                {errors.code && (
+                  <p className="text-red-500 text-xs mt-1">{errors.code}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors duration-200"
+              >
+                {loading ? 'Verifying...' : 'Verify and Continue'}
+              </Button>
+            </form>
+          </>
         )}
       </div>
     </div>

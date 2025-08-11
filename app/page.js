@@ -331,7 +331,7 @@ const LandingPage = () => {
                 Premium Venues
               </span> */}
             </h2>
-            <Link href="/app/main/venue">
+            <Link href="/venue">
               <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
                 See all venues &rarr;
               </Button>

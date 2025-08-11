@@ -27,7 +27,6 @@ export default function RootLayout({ children }) {
     >
       <html lang="en">
         <body className={`${inter.className} antialiased  `}>
-          {/* Hidden div to prevent Clerk CAPTCHA warning */}
           <div id="clerk-captcha" style={{display: 'none'}}></div>
           
           <UserSync />

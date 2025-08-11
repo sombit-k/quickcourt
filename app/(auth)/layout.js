@@ -1,9 +1,6 @@
 "use client";
 import { inter } from "@/app/ui/font"
 import "../globals.css";
-import {
-  ClerkProvider,
-} from '@clerk/nextjs'
 import { useEffect, useRef } from 'react'
 
 export default function AuthLayout({children}) {

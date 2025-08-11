@@ -42,6 +42,7 @@ export function NavbarDemo() {
         <div className="relative w-full z-100">
             <Navbar>
                 {/* Desktop Navigation */}
+                
                 <NavBody>
                     <NavbarLogo />
                     <NavItems items={navItems} />
