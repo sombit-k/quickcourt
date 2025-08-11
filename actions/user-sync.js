@@ -11,6 +11,23 @@ export async function syncUser(userData) {
       where: { clerkId: userData.clerkId }
     })
 
+    // Map role to enum value
+    const mapRole = (role) => {
+      if (!role) return 'USER'
+      switch (role.toLowerCase()) {
+        case 'player':
+        case 'user':
+          return 'USER'
+        case 'facility_owner':
+        case 'facility':
+          return 'FACILITY_OWNER'
+        case 'admin':
+          return 'ADMIN'
+        default:
+          return 'USER'
+      }
+    }
+
     if (existingUser) {
       // Update existing user
       const updatedUser = await db.user.update({
@@ -24,7 +41,7 @@ export async function syncUser(userData) {
           lastLogin: new Date(),
           // Don't update role if it already exists (user choice should persist)
           ...(userData.role && !existingUser.role && { 
-            role: userData.role.toUpperCase() 
+            role: mapRole(userData.role)
           })
         }
       })
@@ -41,7 +58,7 @@ export async function syncUser(userData) {
           lastName: userData.lastName,
           fullName: userData.fullName || `${userData.firstName} ${userData.lastName}`,
           avatar: userData.avatar || userData.profileImage,
-          role: userData.role ? userData.role.toUpperCase() : 'USER', // Default to USER
+          role: mapRole(userData.role),
           isVerified: true, // Since they completed Clerk signup
           lastLogin: new Date()
         }
