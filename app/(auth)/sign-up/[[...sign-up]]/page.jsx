@@ -110,7 +110,7 @@ const SignUpPage = () => {
         }
         
         await setActive({ session: completeSignUp.createdSessionId })
-        router.push('/home')
+        router.push('/')
       } else {
         setErrors({ code: 'Verification failed. Please try again.' })
       }

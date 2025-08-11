@@ -1,12 +1,12 @@
 "use client"
 import React, { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, Clock, MapPin, Phone, Mail, Loader2, Edit } from 'lucide-react'
+import { Calendar, Clock, MapPin, Phone, Mail, Loader2, Edit, X } from 'lucide-react'
 import { getCurrentUser } from '@/actions/user-sync'
 import Link from 'next/link'
 
@@ -15,7 +15,19 @@ const ProfilePage = () => {
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const { user: clerkUser, isLoaded } = useUser()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Check for booking success message
+  useEffect(() => {
+    if (searchParams.get('booking') === 'success') {
+      setShowSuccessMessage(true)
+      // Remove the query parameter from URL
+      router.replace('/profile', undefined, { shallow: true })
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -105,6 +117,31 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pt-25">
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="max-w-7xl mx-auto mb-6">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="bg-green-100 rounded-full p-2 mr-3">
+                <Calendar className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-green-800 font-semibold">Booking Confirmed!</h3>
+                <p className="text-green-700 text-sm">Your court booking has been successfully created.</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSuccessMessage(false)}
+              className="text-green-600 hover:text-green-700"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Sidebar - User Profile */}

@@ -29,9 +29,7 @@ export async function updateUserProfile(formData) {
       throw new Error('Please enter a valid phone number')
     }
 
-    // Note: For Clerk profile updates, we'll focus on database updates
-    // Clerk profile updates should be handled through the Clerk User Button or User Profile component
-
+    
     // Update user in database
     const updatedUser = await db.user.upsert({
       where: { clerkId: user.id },
@@ -90,8 +88,7 @@ export async function changePassword(formData) {
       throw new Error('New passwords do not match')
     }
 
-    // Note: Password changes should be handled through Clerk's API
-    // This is a placeholder for now as Clerk handles password management
+    
     return { 
       success: false, 
       message: 'Password changes must be done through your account settings' 

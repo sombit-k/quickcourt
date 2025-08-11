@@ -306,9 +306,11 @@ const VenueDetailPage = ({ params }) => {
                       </div>
                     </div>
                   </div>
+                  <Link href={`/book/${venue.id}`}> 
                   <Button className="bg-green-600 hover:bg-green-700">
                     Book This Venue
                   </Button>
+                  </Link>
                 </div>
                 
                 {/* Image Gallery */}
@@ -565,9 +567,11 @@ const VenueDetailPage = ({ params }) => {
                     </div>
                   </div>
 
-                  <Button className="w-full bg-green-600 hover:bg-green-700 mb-3">
-                    Book Now
-                  </Button>
+                  <Link href={`/book/${venue.id}`}>
+                    <Button className="w-full bg-green-600 hover:bg-green-700 mb-3">
+                      Book Now
+                    </Button>
+                  </Link>
                   
                   <Button variant="outline" className="w-full">
                     Check Availability
