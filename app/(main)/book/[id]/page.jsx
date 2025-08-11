@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { getVenueById } from '@/actions/venue-actions'
 import { createBooking, getAvailableTimeSlots } from '@/actions/booking-actions'
+import { createBookingWithQueue } from '@/actions/booking-queue-actions'
 import Link from 'next/link'
 
 const BookingPage = ({ params }) => {
@@ -130,28 +131,40 @@ const BookingPage = ({ params }) => {
         notes: bookingForm.notes
       }
 
-      const result = await createBooking(bookingData)
+      const result = await createBookingWithQueue(bookingData)
 
       if (result.success) {
-        // Show success toast
-        toast.success('Booking request submitted! 📋', {
-          description: `Your booking request for ${venue.name} has been sent to the facility manager for approval.`,
-          duration: 5000,
+        if (result.queueInfo.isInQueue) {
+          // User is in queue
+          toast.success(`Added to booking queue! Position #${result.queueInfo.queuePosition}`, {
+            description: `Estimated wait time: ${result.queueInfo.estimatedWaitTime} minutes. You'll be notified when it's your turn.`,
+            duration: 5000,
+          })
+        } else {
+          // User gets immediate booking slot
+          toast.success('Booking slot reserved! Redirecting to payment...', {
+            description: 'Complete your payment within 10 minutes to confirm the booking.',
+            duration: 3000,
+          })
+        }
+
+        // Prepare payment data with queue info
+        const paymentParams = new URLSearchParams({
+          bookingId: result.booking.id,
+          venueName: venue.name,
+          courtName: selectedCourt.name,
+          date: bookingForm.selectedDate,
+          time: bookingForm.selectedTime,
+          duration: bookingForm.duration.toString(),
+          amount: totalPrice.toFixed(2),
+          isInQueue: result.queueInfo.isInQueue.toString(),
+          queuePosition: result.queueInfo.queuePosition?.toString() || '0'
         })
 
-        // Reset form
-        setBookingForm({
-          selectedCourt: '',
-          selectedDate: new Date().toISOString().split('T')[0],
-          selectedTime: '',
-          duration: 1,
-          notes: ''
-        })
-
-        // Redirect to profile with success message after a short delay
+        // Redirect to payment page after a short delay
         setTimeout(() => {
-          router.push('/profile?booking=pending')
-        }, 2000)
+          router.push(`/payment?${paymentParams.toString()}`)
+        }, 1500)
       } else {
         toast.error('Booking failed', {
           description: result.message || 'Unable to create booking. Please try again.',
@@ -391,7 +404,7 @@ const BookingPage = ({ params }) => {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        Submit Booking Request - ₹{totalPrice.toFixed(2)}
+                        Proceed to Payment - ₹{totalPrice.toFixed(2)}
                       </>
                     )}
                   </Button>

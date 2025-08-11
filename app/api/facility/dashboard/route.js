@@ -1,18 +1,18 @@
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { db } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const { userId } = auth()
+    const clerkUser = await currentUser()
     
-    if (!userId) {
+    if (!clerkUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user to verify they're a facility owner
     const user = await db.user.findUnique({
-      where: { clerkId: userId }
+      where: { clerkId: clerkUser.id }
     })
 
     if (!user || user.role !== 'FACILITY_OWNER') {
@@ -48,7 +48,7 @@ export async function GET() {
       }
     })
 
-    const activeCourts = await prisma.court.count({
+    const activeCourts = await db.court.count({
       where: {
         facilityId: { in: facilityIds },
         isActive: true
@@ -62,7 +62,7 @@ export async function GET() {
 
     const earningsData = await db.booking.aggregate({
       _sum: {
-        totalAmount: true
+        totalPrice: true
       },
       where: {
         OR: [
@@ -75,7 +75,7 @@ export async function GET() {
 
     const monthlyEarningsData = await db.booking.aggregate({
       _sum: {
-        totalAmount: true
+        totalPrice: true
       },
       where: {
         OR: [
@@ -96,9 +96,10 @@ export async function GET() {
           { facilityId: { in: facilityIds } },
           { courtId: { in: courtIds } }
         ],
-        date: {
+        bookingDate: {
           gte: new Date()
-        }
+        },
+        status: 'CONFIRMED'
       },
       include: {
         court: true,
@@ -112,7 +113,7 @@ export async function GET() {
         }
       },
       orderBy: {
-        date: 'asc'
+        bookingDate: 'asc'
       },
       take: 10
     })
@@ -120,9 +121,18 @@ export async function GET() {
     return NextResponse.json({
       totalBookings,
       activeCourts,
-      totalEarnings: earningsData._sum.totalAmount || 0,
-      monthlyEarnings: monthlyEarningsData._sum.totalAmount || 0,
-      upcomingBookings
+      totalEarnings: earningsData._sum.totalPrice || 0,
+      monthlyEarnings: monthlyEarningsData._sum.totalPrice || 0,
+      upcomingBookings: upcomingBookings.map(booking => ({
+        id: booking.id,
+        court: booking.court,
+        facility: booking.facility,
+        user: booking.user,
+        date: booking.bookingDate,
+        timeSlot: `${booking.startTime} - ${booking.endTime}`,
+        totalAmount: booking.totalPrice,
+        status: booking.status
+      }))
     })
 
   } catch (error) {

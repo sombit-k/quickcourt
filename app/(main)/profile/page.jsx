@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Clock, MapPin, Phone, Mail, Loader2, Edit, X } from 'lucide-react'
 import { getCurrentUser } from '@/actions/user-sync'
+import { cancelBooking } from '@/actions/booking-actions'
+import { toast } from 'sonner'
 import Link from 'next/link'
 
 const ProfilePage = () => {
@@ -58,6 +60,33 @@ const ProfilePage = () => {
 
     fetchUserData()
   }, [clerkUser, isLoaded])
+
+  // Handle booking cancellation
+  const handleCancelBooking = async (bookingId) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) {
+      return
+    }
+
+    console.log('Attempting to cancel booking:', bookingId)
+
+    try {
+      const result = await cancelBooking(bookingId, 'Cancelled by user')
+      console.log('Cancel booking result:', result)
+      
+      if (result.success) {
+        toast.success('Booking cancelled successfully')
+        // Refresh user data to update the booking list
+        const userData = await getCurrentUser(clerkUser.id)
+        setUserData(userData)
+      } else {
+        console.error('Cancel booking failed:', result.message)
+        toast.error(result.message || 'Failed to cancel booking')
+      }
+    } catch (error) {
+      console.error('Error cancelling booking:', error)
+      toast.error('Failed to cancel booking')
+    }
+  }
 
   // Display loading state
   if (loading) {
@@ -309,14 +338,20 @@ const ProfilePage = () => {
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 flex-wrap">
-                          {!booking.isPast && booking.status !== 'CANCELLED' && (
+                          {!booking.isPast && booking.status === 'PENDING' && (
                             <Button 
                               variant="outline" 
                               size="sm"
                               className="text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={() => handleCancelBooking(booking.id)}
                             >
-                              [Cancel Booking]
+                              Cancel Booking
                             </Button>
+                          )}
+                          {booking.status === 'CONFIRMED' && !booking.isPast && (
+                            <div className="text-xs text-gray-600 bg-yellow-50 px-2 py-1 rounded">
+                              ⚠️ Contact facility to cancel approved booking
+                            </div>
                           )}
                           {booking.isPast && booking.status !== 'CANCELLED' && (
                             <Button 

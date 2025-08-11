@@ -712,9 +712,9 @@ async function main() {
       duration: 1,
       pricePerHour: 500,
       totalPrice: 500,
-      status: 'CONFIRMED',
-      paymentStatus: 'PAID',
-      notes: 'Regular badminton session'
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      notes: 'Regular badminton session - awaiting approval'
     },
     {
       bookingDate: new Date('2024-01-21T00:00:00Z'),
@@ -723,9 +723,9 @@ async function main() {
       duration: 2,
       pricePerHour: 800,
       totalPrice: 1600,
-      status: 'CONFIRMED',
-      paymentStatus: 'PAID',
-      notes: 'Basketball practice session'
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      notes: 'Basketball practice session - awaiting approval'
     },
     {
       bookingDate: new Date('2024-01-22T00:00:00Z'),

@@ -216,29 +216,47 @@ async function getFacilityIdForCourt(courtId) {
 
 export async function cancelBooking(bookingId, reason) {
   try {
+    console.log('cancelBooking called with:', { bookingId, reason })
+    
     const user = await currentUser()
     if (!user) {
       throw new Error('User not authenticated')
     }
+    
+    console.log('Current user:', { id: user.id, email: user.emailAddresses?.[0]?.emailAddress })
 
-    const dbUser = await db.user.findUnique({
-      where: { clerkId: user.id }
-    })
-
-    if (!dbUser) {
-      throw new Error('User not found')
-    }
-
-    // Find the booking and verify ownership
-    const booking = await db.booking.findFirst({
-      where: {
-        id: bookingId,
-        userId: dbUser.id
+    // Find the booking first
+    const booking = await db.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        facility: true,
+        court: true
       }
     })
 
+    console.log('Found booking:', booking ? { id: booking.id, status: booking.status, userClerkId: booking.user?.clerkId } : 'Not found')
+
     if (!booking) {
-      throw new Error('Booking not found or you do not have permission to cancel it')
+      throw new Error('Booking not found')
+    }
+
+    // Verify ownership using Clerk ID
+    if (booking.user.clerkId !== user.id) {
+      throw new Error('You do not have permission to cancel this booking')
+    }
+
+    // Check if booking is approved - users can only cancel pending bookings
+    if (booking.status === 'CONFIRMED') {
+      throw new Error('Cannot cancel approved bookings. Please contact the facility to cancel.')
+    }
+
+    if (booking.status === 'CANCELLED') {
+      throw new Error('Booking is already cancelled')
+    }
+
+    if (booking.status === 'REJECTED') {
+      throw new Error('Cannot cancel rejected bookings')
     }
 
     // Check if booking can be cancelled (e.g., not already in the past)
@@ -312,6 +330,10 @@ export async function getUserBookings(clerkId) {
 // Get pending bookings for facility manager
 export async function getPendingBookingsForFacility(facilityId) {
   try {
+    if (!facilityId) {
+      throw new Error('Facility ID is required')
+    }
+    
     const bookings = await db.booking.findMany({
       where: {
         facilityId,

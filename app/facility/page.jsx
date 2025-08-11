@@ -102,22 +102,113 @@ export default function FacilityManagementPage() {
         const data = await response.json()
         setDashboardData(data)
       } else {
-        // Calculate basic metrics from facilities data as fallback
-        const activeCourts = facilitiesData.reduce((sum, facility) => 
-          sum + (facility.courts?.filter(court => court.isActive)?.length || 0), 0
-        )
-        const totalBookings = facilitiesData.reduce((sum, facility) => 
-          sum + (facility._count?.bookings || 0), 0
-        )
-        
-        setDashboardData(prev => ({
-          ...prev,
-          activeCourts,
-          totalBookings
-        }))
+        // Calculate metrics from facilities data as fallback
+        await calculateFallbackMetrics(facilitiesData)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      // Calculate metrics from facilities data as fallback
+      await calculateFallbackMetrics(facilitiesData)
+    }
+  }
+
+  const calculateFallbackMetrics = async (facilitiesData) => {
+    try {
+      const activeCourts = facilitiesData.reduce((sum, facility) => 
+        sum + (facility.courts?.filter(court => court.isActive)?.length || 0), 0
+      )
+
+      // Get all facility IDs
+      const facilityIds = facilitiesData.map(facility => facility.id)
+
+      if (facilityIds.length > 0) {
+        // Fetch confirmed bookings for earnings calculation
+        const bookingsResponse = await fetch('/api/facility/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ facilityIds })
+        })
+
+        let totalEarnings = 0
+        let monthlyEarnings = 0
+        let totalBookings = 0
+        let upcomingBookings = []
+
+        if (bookingsResponse.ok) {
+          const bookingsData = await bookingsResponse.json()
+          
+          // Calculate earnings from confirmed bookings
+          const currentMonth = new Date()
+          currentMonth.setDate(1)
+          currentMonth.setHours(0, 0, 0, 0)
+
+          totalBookings = bookingsData.length
+          
+          bookingsData.forEach(booking => {
+            if (booking.status === 'CONFIRMED') {
+              totalEarnings += booking.totalPrice || 0
+              
+              // Check if booking is from current month
+              const bookingDate = new Date(booking.createdAt)
+              if (bookingDate >= currentMonth) {
+                monthlyEarnings += booking.totalPrice || 0
+              }
+            }
+
+            // Get upcoming bookings
+            const bookingDateTime = new Date(booking.bookingDate)
+            if (bookingDateTime >= new Date() && booking.status === 'CONFIRMED') {
+              upcomingBookings.push({
+                court: { name: booking.court?.name },
+                facility: { name: booking.facility?.name },
+                date: booking.bookingDate,
+                timeSlot: `${booking.startTime} - ${booking.endTime}`,
+                totalAmount: booking.totalPrice,
+                status: booking.status
+              })
+            }
+          })
+
+          // Sort upcoming bookings by date
+          upcomingBookings.sort((a, b) => new Date(a.date) - new Date(b.date))
+          upcomingBookings = upcomingBookings.slice(0, 10)
+        }
+
+        setDashboardData({
+          totalBookings,
+          activeCourts,
+          totalEarnings,
+          monthlyEarnings,
+          upcomingBookings
+        })
+      } else {
+        // No facilities, set all to zero
+        setDashboardData({
+          totalBookings: 0,
+          activeCourts: 0,
+          totalEarnings: 0,
+          monthlyEarnings: 0,
+          upcomingBookings: []
+        })
+      }
+    } catch (error) {
+      console.error('Error calculating fallback metrics:', error)
+      // Set basic metrics from facilities data
+      const activeCourts = facilitiesData.reduce((sum, facility) => 
+        sum + (facility.courts?.filter(court => court.isActive)?.length || 0), 0
+      )
+      const totalBookings = facilitiesData.reduce((sum, facility) => 
+        sum + (facility._count?.bookings || 0), 0
+      )
+      
+      setDashboardData(prev => ({
+        ...prev,
+        activeCourts,
+        totalBookings,
+        totalEarnings: 0,
+        monthlyEarnings: 0,
+        upcomingBookings: []
+      }))
     }
   }
 

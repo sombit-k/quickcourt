@@ -98,6 +98,14 @@ model Booking {
   totalPrice      Float
   status          BookingStatus @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
+  
+  // Queue and priority fields
+  queuePosition   Int?          // Position in queue (1 = highest priority)
+  isInQueue       Boolean       @default(false)
+  queueExpiresAt  DateTime?     // When queue position expires
+  paymentStartedAt DateTime?    // When user started payment process
+  paymentExpiresAt DateTime?    // Payment timeout (10 minutes)
+  
   notes           String?
   cancelReason    String?
   rejectionReason String?
