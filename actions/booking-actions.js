@@ -41,9 +41,7 @@ export async function createBooking(bookingData) {
       where: {
         courtId,
         bookingDate: new Date(bookingDate),
-        status: {
-          in: ['CONFIRMED', 'PENDING']
-        },
+        status: 'CONFIRMED', // Only check confirmed bookings for conflicts
         OR: [
           {
             AND: [
