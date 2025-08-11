@@ -264,13 +264,23 @@ export default function FacilityManagementPage() {
               Manage your sports facilities and courts
             </p>
           </div>
-          <Button 
-            onClick={() => router.push('/facility/new')}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add New Facility
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => router.push('/facility/bookings')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Booking Requests
+            </Button>
+            <Button 
+              onClick={() => router.push('/facility/new')}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add New Facility
+            </Button>
+          </div>
         </div>
 
         {/* Dashboard Metrics */}
@@ -349,49 +359,23 @@ export default function FacilityManagementPage() {
         {/* Booking Calendar */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              Upcoming Bookings
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Upcoming Bookings
+              </CardTitle>
+              <Button 
+                onClick={() => router.push('/facility/bookings')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Manage Bookings
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            {dashboardData.upcomingBookings.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No upcoming bookings</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {dashboardData.upcomingBookings.slice(0, 5).map((booking, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">{booking.court?.name}</h4>
-                        <p className="text-sm text-gray-600">{booking.facility?.name}</p>
-                        <p className="text-sm text-gray-500">{formatDate(booking.date)} - {booking.timeSlot}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">{formatCurrency(booking.totalAmount)}</p>
-                      <Badge variant={booking.status === 'CONFIRMED' ? 'default' : 'secondary'}>
-                        {booking.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-                {dashboardData.upcomingBookings.length > 5 && (
-                  <div className="text-center pt-4">
-                    <Button variant="outline" onClick={() => router.push('/facility/bookings')}>
-                      View All Bookings ({dashboardData.upcomingBookings.length})
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
+          
         </Card>
 
         {/* Facilities List */}

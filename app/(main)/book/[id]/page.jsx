@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   Calendar,
-  MapPin, 
-  Phone, 
+  MapPin,
+  Phone,
   Star,
   Loader2,
   CreditCard,
@@ -41,7 +41,7 @@ const BookingPage = ({ params }) => {
   const [submitting, setSubmitting] = useState(false)
   const [availableSlots, setAvailableSlots] = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
-
+  
   // Booking form state
   const [bookingForm, setBookingForm] = useState({
     selectedCourt: '',
@@ -98,7 +98,7 @@ const BookingPage = ({ params }) => {
   // Handle form submission
   const handleBookingSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!clerkUser) {
       toast.error('Please sign in to make a booking')
       return
@@ -134,11 +134,11 @@ const BookingPage = ({ params }) => {
 
       if (result.success) {
         // Show success toast
-        toast.success('Booking confirmed successfully! 🎉', {
-          description: `Your court booking for ${venue.name} has been saved.`,
+        toast.success('Booking request submitted! 📋', {
+          description: `Your booking request for ${venue.name} has been sent to the facility manager for approval.`,
           duration: 5000,
         })
-        
+
         // Reset form
         setBookingForm({
           selectedCourt: '',
@@ -147,10 +147,10 @@ const BookingPage = ({ params }) => {
           duration: 1,
           notes: ''
         })
-        
+
         // Redirect to profile with success message after a short delay
         setTimeout(() => {
-          router.push('/profile?booking=success')
+          router.push('/profile?booking=pending')
         }, 2000)
       } else {
         toast.error('Booking failed', {
@@ -253,7 +253,7 @@ const BookingPage = ({ params }) => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Left Side - Booking Form */}
           <div className="lg:col-span-2">
             <Card>
@@ -265,12 +265,12 @@ const BookingPage = ({ params }) => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleBookingSubmit} className="space-y-6">
-                  
+
                   {/* Court Selection */}
                   <div>
                     <Label htmlFor="court">Select Court *</Label>
-                    <Select 
-                      value={bookingForm.selectedCourt} 
+                    <Select
+                      value={bookingForm.selectedCourt}
                       onValueChange={(value) => setBookingForm(prev => ({ ...prev, selectedCourt: value }))}
                     >
                       <SelectTrigger>
@@ -376,13 +376,13 @@ const BookingPage = ({ params }) => {
                   </div>
 
                   {/* Submit Button */}
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={submitting || !bookingForm.selectedCourt || !bookingForm.selectedTime}
                     className="w-full bg-green-600 hover:bg-green-700"
-                  > 
+                  >
 
-                {/* on clicking this button save the booking to the db with relation to the user. and show a toast that the data has been saved */}
+                    {/* on clicking this button save the booking to the db with relation to the user. and show a toast that the data has been saved */}
                     {submitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -391,7 +391,7 @@ const BookingPage = ({ params }) => {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        Confirm Booking - ₹{totalPrice.toFixed(2)}
+                        Submit Booking Request - ₹{totalPrice.toFixed(2)}
                       </>
                     )}
                   </Button>
@@ -402,7 +402,7 @@ const BookingPage = ({ params }) => {
 
           {/* Right Side - Venue Info & Booking Summary */}
           <div className="lg:col-span-1 space-y-6">
-            
+
             {/* Venue Info */}
             <Card>
               <CardHeader>
@@ -413,12 +413,12 @@ const BookingPage = ({ params }) => {
                   <MapPin className="w-4 h-4 mr-2" />
                   <span>{venue.address}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <Phone className="w-4 h-4 mr-2" />
                   <span>{venue.phone}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <Star className="w-4 h-4 mr-2 text-yellow-400 fill-current" />
                   <span>{venue.rating?.toFixed(1)} ({venue.totalReviews} reviews)</span>
@@ -437,7 +437,7 @@ const BookingPage = ({ params }) => {
                     <span className="text-gray-600">Court:</span>
                     <span className="font-medium">{selectedCourt?.name}</span>
                   </div>
-                  
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date:</span>
                     <span className="font-medium">
@@ -449,7 +449,7 @@ const BookingPage = ({ params }) => {
                       })}
                     </span>
                   </div>
-                  
+
                   {bookingForm.selectedTime && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Time:</span>
@@ -458,19 +458,19 @@ const BookingPage = ({ params }) => {
                       </span>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Duration:</span>
                     <span className="font-medium">{bookingForm.duration} hour{bookingForm.duration !== 1 ? 's' : ''}</span>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Rate:</span>
                     <span className="font-medium">₹{selectedCourt?.pricePerHour}/hr</span>
                   </div>
-                  
+
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
                     <span className="text-green-600">₹{totalPrice.toFixed(2)}</span>

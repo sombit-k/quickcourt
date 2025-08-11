@@ -16,15 +16,23 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [successMessageType, setSuccessMessageType] = useState('pending') // 'pending' or 'success'
   const { user: clerkUser, isLoaded } = useUser()
   const searchParams = useSearchParams()
   const router = useRouter()
 
   // Check for booking success message
   useEffect(() => {
-    if (searchParams.get('booking') === 'success') {
+    const bookingParam = searchParams.get('booking')
+    if (bookingParam === 'success') {
       setShowSuccessMessage(true)
+      setSuccessMessageType('success')
       // Remove the query parameter from URL
+      router.replace('/profile', undefined, { shallow: true })
+    } else if (bookingParam === 'pending') {
+      setShowSuccessMessage(true)
+      setSuccessMessageType('pending')
+      // Remove the query parameter from URL  
       router.replace('/profile', undefined, { shallow: true })
     }
   }, [searchParams, router])
@@ -113,32 +121,58 @@ const ProfilePage = () => {
     }
   }) || []
 
-  const filteredBookings = activeTab === 'all' ? bookings : bookings.filter(booking => booking.status === 'CANCELLED')
+  const filteredBookings = activeTab === 'all' 
+    ? bookings 
+    : activeTab === 'pending' 
+    ? bookings.filter(booking => booking.status === 'PENDING')
+    : bookings.filter(booking => booking.status === 'CANCELLED')
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pt-25">
       {/* Success Message */}
       {showSuccessMessage && (
         <div className="max-w-7xl mx-auto mb-6">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="bg-green-100 rounded-full p-2 mr-3">
-                <Calendar className="w-5 h-5 text-green-600" />
+          {successMessageType === 'pending' ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="bg-blue-100 rounded-full p-2 mr-3">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-blue-800 font-semibold">Booking Request Submitted!</h3>
+                  <p className="text-blue-700 text-sm">Your booking request has been sent to the facility manager for approval.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-green-800 font-semibold">Booking Confirmed!</h3>
-                <p className="text-green-700 text-sm">Your court booking has been successfully created.</p>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSuccessMessage(false)}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSuccessMessage(false)}
-              className="text-green-600 hover:text-green-700"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="bg-green-100 rounded-full p-2 mr-3">
+                  <Calendar className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-green-800 font-semibold">Booking Confirmed!</h3>
+                  <p className="text-green-700 text-sm">Your court booking has been successfully confirmed.</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSuccessMessage(false)}
+                className="text-green-600 hover:text-green-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
       
@@ -206,6 +240,13 @@ const ProfilePage = () => {
                   All Bookings
                 </Button>
                 <Button
+                  variant={activeTab === 'pending' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('pending')}
+                  className={activeTab === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                >
+                  Pending Approval
+                </Button>
+                <Button
                   variant={activeTab === 'cancelled' ? 'default' : 'outline'}
                   onClick={() => setActiveTab('cancelled')}
                   className={activeTab === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
@@ -220,7 +261,7 @@ const ProfilePage = () => {
               <div className="space-y-4">
                 {filteredBookings.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    No {activeTab === 'cancelled' ? 'cancelled' : ''} bookings found
+                    No {activeTab === 'cancelled' ? 'cancelled' : activeTab === 'pending' ? 'pending' : ''} bookings found
                   </div>
                 ) : (
                   filteredBookings.map((booking) => (

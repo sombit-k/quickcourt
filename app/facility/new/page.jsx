@@ -18,7 +18,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select'
-import { Plus, Trash2, Clock, MapPin, Phone, Mail, Globe, Star } from 'lucide-react'
+import { Plus, Trash2, Clock, MapPin, } from 'lucide-react'
 
 export default function NewFacilityPage() {
   const { user, isLoaded } = useUser()
@@ -292,7 +292,7 @@ export default function NewFacilityPage() {
 
       if (result.success) {
         toast.success(result.message)
-        router.push('/venue')
+        router.push('/facility')
       } else {
         toast.error(result.message)
       }

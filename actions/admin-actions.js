@@ -482,3 +482,255 @@ export async function getUserBookingHistory(targetUserId, page = 1, limit = 10) 
     }
   }
 }
+
+export async function getPendingFacilities(page = 1, limit = 10) {
+  try {
+    const { userId } = await auth()
+    
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // Verify user is admin
+    const adminUser = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { role: true }
+    })
+
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      throw new Error('Forbidden - Admin access required')
+    }
+
+    const skip = (page - 1) * limit
+
+    const [facilities, totalCount] = await Promise.all([
+      db.facility.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          owner: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          courts: {
+            select: {
+              name: true,
+              sportType: true,
+              pricePerHour: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      db.facility.count({
+        where: { status: 'PENDING' }
+      })
+    ])
+
+    // Transform facilities data for display
+    const transformedFacilities = facilities.map(facility => ({
+      id: facility.id,
+      name: facility.name,
+      description: facility.description,
+      address: facility.address,
+      city: facility.city,
+      state: facility.state,
+      zipCode: facility.zipCode,
+      phone: facility.phone,
+      email: facility.email,
+      website: facility.website,
+      sportsTypes: (() => {
+        try {
+          return JSON.parse(facility.sportsTypes || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      amenities: (() => {
+        try {
+          return JSON.parse(facility.amenities || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      images: (() => {
+        try {
+          return JSON.parse(facility.images || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      operatingHours: (() => {
+        try {
+          return JSON.parse(facility.operatingHours || '{}')
+        } catch (e) {
+          return {}
+        }
+      })(),
+      status: facility.status,
+      createdAt: facility.createdAt,
+      updatedAt: facility.updatedAt,
+      owner: facility.owner,
+      courts: facility.courts
+    }))
+
+    const totalPages = Math.ceil(totalCount / limit)
+
+    return {
+      success: true,
+      data: {
+        facilities: transformedFacilities,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching pending facilities:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+export async function approveFacility(facilityId, adminComments = '') {
+  try {
+    const { userId } = await auth()
+    
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // Verify user is admin
+    const adminUser = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { role: true }
+    })
+
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      throw new Error('Forbidden - Admin access required')
+    }
+
+    // Check if facility exists and is pending
+    const facility = await db.facility.findUnique({
+      where: { id: facilityId },
+      select: { status: true, name: true }
+    })
+
+    if (!facility) {
+      throw new Error('Facility not found')
+    }
+
+    if (facility.status !== 'PENDING') {
+      throw new Error('Facility is not in pending status')
+    }
+
+    // Update facility status to approved
+    const updatedFacility = await db.facility.update({
+      where: { id: facilityId },
+      data: { 
+        status: 'APPROVED',
+        rejectionReason: null // Clear any previous rejection reason
+      },
+      include: {
+        owner: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    })
+
+    return {
+      success: true,
+      data: updatedFacility,
+      message: `Facility "${facility.name}" has been approved successfully`
+    }
+  } catch (error) {
+    console.error('Error approving facility:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+export async function rejectFacility(facilityId, rejectionReason) {
+  try {
+    const { userId } = await auth()
+    
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // Verify user is admin
+    const adminUser = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { role: true }
+    })
+
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      throw new Error('Forbidden - Admin access required')
+    }
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      throw new Error('Rejection reason is required')
+    }
+
+    // Check if facility exists and is pending
+    const facility = await db.facility.findUnique({
+      where: { id: facilityId },
+      select: { status: true, name: true }
+    })
+
+    if (!facility) {
+      throw new Error('Facility not found')
+    }
+
+    if (facility.status !== 'PENDING') {
+      throw new Error('Facility is not in pending status')
+    }
+
+    // Update facility status to rejected with reason
+    const updatedFacility = await db.facility.update({
+      where: { id: facilityId },
+      data: { 
+        status: 'REJECTED',
+        rejectionReason: rejectionReason.trim()
+      },
+      include: {
+        owner: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    })
+
+    return {
+      success: true,
+      data: updatedFacility,
+      message: `Facility "${facility.name}" has been rejected`
+    }
+  } catch (error) {
+    console.error('Error rejecting facility:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}

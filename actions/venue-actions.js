@@ -51,17 +51,47 @@ export async function getAllVenues(sortBy = 'rating') {
       rating: venue.rating || 0,
       reviews: venue.totalReviews || 0,
       totalReviews: venue.totalReviews || 0,
-      sportsTypes: JSON.parse(venue.sportsTypes || '[]'),
-      amenities: JSON.parse(venue.amenities || '[]'),
-      images: JSON.parse(venue.images || '[]'),
-      operatingHours: JSON.parse(venue.operatingHours || '{}'),
+      sportsTypes: (() => {
+        try {
+          return JSON.parse(venue.sportsTypes || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      amenities: (() => {
+        try {
+          return JSON.parse(venue.amenities || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      images: (() => {
+        try {
+          return JSON.parse(venue.images || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      operatingHours: (() => {
+        try {
+          return JSON.parse(venue.operatingHours || '{}')
+        } catch (e) {
+          return {}
+        }
+      })(),
       courts: venue.courts.map(court => ({
         id: court.id,
         name: court.name,
         sportType: court.sportType,
         pricePerHour: court.pricePerHour,
         description: court.description,
-        images: JSON.parse(court.images || '[]')
+        images: (() => {
+          try {
+            return JSON.parse(court.images || '[]')
+          } catch (e) {
+            return []
+          }
+        })()
       })),
       minPrice: venue.courts.length > 0 
         ? Math.min(...venue.courts.map(court => court.pricePerHour))
@@ -194,17 +224,47 @@ export async function searchVenues(filters) {
           rating: venue.rating || 0,
           reviews: venue.totalReviews || 0,
           totalReviews: venue.totalReviews || 0,
-          sportsTypes: JSON.parse(venue.sportsTypes || '[]'),
-          amenities: JSON.parse(venue.amenities || '[]'),
-          images: JSON.parse(venue.images || '[]'),
-          operatingHours: JSON.parse(venue.operatingHours || '{}'),
+          sportsTypes: (() => {
+            try {
+              return JSON.parse(venue.sportsTypes || '[]')
+            } catch (e) {
+              return []
+            }
+          })(),
+          amenities: (() => {
+            try {
+              return JSON.parse(venue.amenities || '[]')
+            } catch (e) {
+              return []
+            }
+          })(),
+          images: (() => {
+            try {
+              return JSON.parse(venue.images || '[]')
+            } catch (e) {
+              return []
+            }
+          })(),
+          operatingHours: (() => {
+            try {
+              return JSON.parse(venue.operatingHours || '{}')
+            } catch (e) {
+              return {}
+            }
+          })(),
           courts: venue.courts.map(court => ({
             id: court.id,
             name: court.name,
             sportType: court.sportType,
             pricePerHour: court.pricePerHour,
             description: court.description,
-            images: JSON.parse(court.images || '[]')
+            images: (() => {
+              try {
+                return JSON.parse(court.images || '[]')
+              } catch (e) {
+                return []
+              }
+            })()
           })),
           minPrice: venue.courts.length > 0 
             ? Math.min(...venue.courts.map(court => court.pricePerHour))
@@ -369,17 +429,47 @@ export async function getVenueById(id) {
       rating: venue.rating || 0,
       reviews: venue.totalReviews || 0,
       totalReviews: venue.totalReviews || 0,
-      sportsTypes: JSON.parse(venue.sportsTypes || '[]'),
-      amenities: JSON.parse(venue.amenities || '[]'),
-      images: JSON.parse(venue.images || '[]'),
-      operatingHours: JSON.parse(venue.operatingHours || '{}'),
+      sportsTypes: (() => {
+        try {
+          return JSON.parse(venue.sportsTypes || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      amenities: (() => {
+        try {
+          return JSON.parse(venue.amenities || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      images: (() => {
+        try {
+          return JSON.parse(venue.images || '[]')
+        } catch (e) {
+          return []
+        }
+      })(),
+      operatingHours: (() => {
+        try {
+          return JSON.parse(venue.operatingHours || '{}')
+        } catch (e) {
+          return {}
+        }
+      })(),
       courts: venue.courts.map(court => ({
         id: court.id,
         name: court.name,
         sportType: court.sportType,
         pricePerHour: court.pricePerHour,
         description: court.description,
-        images: JSON.parse(court.images || '[]')
+        images: (() => {
+          try {
+            return JSON.parse(court.images || '[]')
+          } catch (e) {
+            return []
+          }
+        })()
       })),
       minPrice: venue.courts.length > 0 
         ? Math.min(...venue.courts.map(court => court.pricePerHour))

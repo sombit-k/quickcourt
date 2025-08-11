@@ -484,8 +484,10 @@ const VenueDetailPage = ({ params }) => {
                   <div className="space-y-2 text-sm">
                     {Object.entries(venue.operatingHours || {}).map(([day, hours]) => (
                       <div key={day} className="flex justify-between">
-                        <span className="text-gray-600">{day}</span>
-                        <span className="font-medium">{hours}</span>
+                        <span className="text-gray-600 capitalize">{day}</span>
+                        <span className="font-medium">
+                          {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
+                        </span>
                       </div>
                     ))}
                   </div>
