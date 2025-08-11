@@ -10,7 +10,7 @@ datasource db {
 model User {
   id         String    @id @default(uuid())
   clerkId    String    @unique
-  email      String    @unique
+  email      String    @unique //if db already contains the email update different fields when user-sync action is invoked #error fixed
   firstName  String
   lastName   String
   fullName   String?
@@ -69,7 +69,7 @@ model Facility {
 }
 
 model Court {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   name         String
   sportType    String // "badminton", "tennis", "basketball", etc.
   pricePerHour Float
@@ -89,7 +89,7 @@ model Court {
 }
 
 model Booking {
-  id            String        @id @default(cuid())
+  id            String        @id @default(uuid())
   bookingDate   DateTime
   startTime     String // "09:00"
   endTime       String // "10:00"
@@ -115,7 +115,7 @@ model Booking {
 }
 
 model Review {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   rating      Int // 1-5 stars
   comment     String?
   isAnonymous Boolean  @default(false)
@@ -133,7 +133,7 @@ model Review {
 }
 
 model BlockedTimeSlot {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   date        DateTime
   startTime   String // "09:00"
   endTime     String // "10:00"
@@ -152,7 +152,7 @@ model BlockedTimeSlot {
 }
 
 model Report {
-  id          String       @id @default(cuid())
+  id          String       @id @default(uuid())
   type        ReportType
   reason      String
   description String?
@@ -173,7 +173,7 @@ model Report {
 }
 
 model Analytics {
-  id               String   @id @default(cuid())
+  id               String   @id @default(uuid())
   date             DateTime
   totalBookings    Int      @default(0)
   totalRevenue     Float    @default(0)
