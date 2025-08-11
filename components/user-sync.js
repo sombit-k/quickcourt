@@ -6,7 +6,8 @@ import { syncUser } from '@/actions/user-sync'
 
 export default function UserSync() {
   const { user, isLoaded } = useUser()
-  console.log("UserSync component rendered",{ user, isLoaded })
+  console.log("UserSync component rendered", { user, isLoaded })
+  
   useEffect(() => {
     const handleUserSync = async () => {
       if (isLoaded && user) {
@@ -17,7 +18,9 @@ export default function UserSync() {
             email: user.emailAddresses[0]?.emailAddress || '',
             firstName: user.firstName || '',
             lastName: user.lastName || '',
-            imageUrl: user.imageUrl || '',
+            profileImage: user.imageUrl || null,
+            // Get role from user metadata if it exists (from custom signup)
+            role: user.unsafeMetadata?.role || null
           }
           
           await syncUser(userData)

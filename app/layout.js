@@ -1,7 +1,7 @@
 import { inter } from "@/app/ui/font"
 import { NavbarDemo } from "@/app/ui/navbar";
 // import Footer from "@/components/footer";
-// import UserSync from "@/components/user-sync";
+import UserSync from "@/components/user-sync";
 import "./globals.css";
 import {
   ClerkProvider,
@@ -10,10 +10,10 @@ import {
 
 export const metadata = {
   title: {
-    template: '%s | Support Agent',
-    default: 'Support Agent',
+    template: '%s | QUICKCOURT',
+    default: 'QUICKCOURT',
   },
-  description: 'Easily manage your support tickets with Support Agent.',
+  description: 'Easily manage your sports booking with QUICKCOURT.',
 };
 
 export default function RootLayout({ children }) {
@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.className} antialiased  `}>
-          {/* <UserSync /> */}
+          <UserSync />
           
           <NavbarDemo />
 

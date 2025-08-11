@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  firstName   String
+  lastName    String
+  role        String   // "player" or "facility"
+  profileImage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  bookings    Booking[]
+  facilities  Facility[]
+
+  @@map("users")
+}
+
+model Facility {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  phone       String?
+  email       String?
+  pricePerHour Float
+  amenities   String?  // JSON string of amenities
+  images      String?  // JSON string of image URLs
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  bookings    Booking[]
+  courts      Court[]
+
+  @@map("facilities")
+}
+
+model Court {
+  id          String   @id @default(cuid())
+  name        String
+  courtType   String   // "basketball", "tennis", "badminton", etc.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  facilityId  String
+  facility    Facility @relation(fields: [facilityId], references: [id])
+  bookings    Booking[]
+
+  @@map("courts")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  totalPrice  Float
+  status      String   @default("pending") // "pending", "confirmed", "cancelled", "completed"
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  facilityId  String
+  facility    Facility @relation(fields: [facilityId], references: [id])
+  courtId     String
+  court       Court    @relation(fields: [courtId], references: [id])
+
+  @@map("bookings")
+}
