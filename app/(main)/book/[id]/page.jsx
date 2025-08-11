@@ -2,6 +2,7 @@
 import React, { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
+import { toast } from 'sonner'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -101,12 +102,12 @@ const BookingPage = ({ params }) => {
     e.preventDefault()
     
     if (!clerkUser) {
-      setError('Please sign in to make a booking')
+      toast.error('Please sign in to make a booking')
       return
     }
 
     if (!bookingForm.selectedCourt || !bookingForm.selectedDate || !bookingForm.selectedTime) {
-      setError('Please fill in all required fields')
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -134,14 +135,35 @@ const BookingPage = ({ params }) => {
       const result = await createBooking(bookingData)
 
       if (result.success) {
-        // Redirect to profile with success message
-        router.push('/profile?booking=success')
+        // Show success toast
+        toast.success('Booking confirmed successfully! 🎉', {
+          description: `Your court booking for ${venue.name} has been saved.`,
+          duration: 5000,
+        })
+        
+        // Reset form
+        setBookingForm({
+          selectedCourt: '',
+          selectedDate: new Date().toISOString().split('T')[0],
+          selectedTime: '',
+          duration: 1,
+          notes: ''
+        })
+        
+        // Redirect to profile with success message after a short delay
+        setTimeout(() => {
+          router.push('/profile?booking=success')
+        }, 2000)
       } else {
-        setError(result.message)
+        toast.error('Booking failed', {
+          description: result.message || 'Unable to create booking. Please try again.',
+        })
       }
     } catch (err) {
       console.error('Error creating booking:', err)
-      setError('Failed to create booking. Please try again.')
+      toast.error('Booking failed', {
+        description: 'Failed to create booking. Please try again.',
+      })
     } finally {
       setSubmitting(false)
     }

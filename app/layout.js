@@ -2,6 +2,7 @@ import { inter } from "@/app/ui/font"
 import { NavbarDemo } from "@/app/ui/navbar";
 import Footer from "@/components/footer";
 import UserSync from "@/components/user-sync";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import {
   ClerkProvider,
@@ -38,7 +39,8 @@ export default function RootLayout({ children }) {
           </main>
           {/* footer */}
           <Footer />
-
+          
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
