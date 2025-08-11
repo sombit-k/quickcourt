@@ -2,74 +2,118 @@
 
 import { db } from '@/lib/prisma'
 
-export async function syncUser(userData) {
-  try {
-    console.log('Syncing user:', userData)
-    
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { clerkId: userData.clerkId }
-    })
+// Utility function to validate and normalize user data
+function validateAndNormalizeUserData(userData) {
+  const errors = []
+  
+  if (!userData?.clerkId) {
+    errors.push('ClerkId is required')
+  }
+  
+  if (!userData?.email) {
+    errors.push('Email is required')
+  }
+  
+  const firstName = userData?.firstName || userData?.username || 'User'
+  const lastName = userData?.lastName || ''
+  
+  if (!firstName.trim()) {
+    errors.push('First name cannot be empty')
+  }
+  
+  if (errors.length > 0) {
+    throw new Error(`Validation failed: ${errors.join(', ')}`)
+  }
+  
+  return {
+    clerkId: userData.clerkId,
+    email: userData.email,
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    fullName: userData.fullName || `${firstName.trim()} ${lastName.trim()}`.trim(),
+    avatar: userData.avatar || userData.profileImage || null,
+    role: userData.role || 'USER'
+  }
+}
 
-    // Map role to enum value
-    const mapRole = (role) => {
-      if (!role) return 'USER'
-      switch (role.toLowerCase()) {
-        case 'player':
-        case 'user':
-          return 'USER'
-        case 'facility_owner':
-        case 'facility':
-          return 'FACILITY_OWNER'
-        case 'admin':
-          return 'ADMIN'
-        default:
-          return 'USER'
-      }
+export async function syncUser(userInput) {
+  try {
+    console.log('Syncing user:', userInput)
+    
+    // Simple validation
+    if (!userInput?.clerkId || !userInput?.email) {
+      throw new Error('Missing required user data')
     }
+    
+    // Clean the data
+    const cleanData = {
+      clerkId: userInput.clerkId,
+      email: userInput.email,
+      firstName: userInput.firstName || 'User',
+      lastName: userInput.lastName || '',
+      fullName: userInput.fullName || `${userInput.firstName || 'User'} ${userInput.lastName || ''}`.trim(),
+      avatar: userInput.avatar || userInput.profileImage || null,
+      role: userInput.role || 'USER'
+    }
+
+    // Map role to enum
+    const roleMap = {
+      'player': 'USER',
+      'user': 'USER',
+      'facility_owner': 'FACILITY_OWNER',
+      'facility': 'FACILITY_OWNER',
+      'admin': 'ADMIN'
+    }
+    const mappedRole = roleMap[cleanData.role?.toLowerCase()] || 'USER'
+
+    // Check if user exists by clerkId OR email
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { clerkId: cleanData.clerkId },
+          { email: cleanData.email }
+        ]
+      }
+    })
 
     if (existingUser) {
       // Update existing user
       const updatedUser = await db.user.update({
-        where: { clerkId: userData.clerkId },
+        where: { id: existingUser.id },
         data: {
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          fullName: userData.fullName || `${userData.firstName} ${userData.lastName}`,
-          avatar: userData.avatar || userData.profileImage,
-          lastLogin: new Date(),
-          // Don't update role if it already exists (user choice should persist)
-          ...(userData.role && !existingUser.role && { 
-            role: mapRole(userData.role)
-          })
+          clerkId: cleanData.clerkId,
+          email: cleanData.email,
+          firstName: cleanData.firstName,
+          lastName: cleanData.lastName,
+          fullName: cleanData.fullName,
+          avatar: cleanData.avatar,
+          lastLogin: new Date()
         }
       })
-      
-      console.log('User updated:', updatedUser)
+      console.log('User updated:', updatedUser.id)
       return updatedUser
     } else {
       // Create new user
       const newUser = await db.user.create({
         data: {
-          clerkId: userData.clerkId,
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          fullName: userData.fullName || `${userData.firstName} ${userData.lastName}`,
-          avatar: userData.avatar || userData.profileImage,
-          role: mapRole(userData.role),
-          isVerified: true, // Since they completed Clerk signup
+          clerkId: cleanData.clerkId,
+          email: cleanData.email,
+          firstName: cleanData.firstName,
+          lastName: cleanData.lastName,
+          fullName: cleanData.fullName,
+          avatar: cleanData.avatar,
+          role: mappedRole,
+          isVerified: true,
           lastLogin: new Date()
         }
       })
-      
-      console.log('User created:', newUser)
+      console.log('User created:', newUser.id)
       return newUser
     }
+    
   } catch (error) {
-    console.error('Error syncing user:', error)
-    throw new Error('Failed to sync user data')
+    console.error('Error syncing user:', error.message)
+    throw new Error(`User sync failed: ${error.message}`)
   }
 }
 

@@ -56,15 +56,62 @@ export async function POST(req) {
     switch (eventType) {
       case 'user.created':
       case 'user.updated': {
-        const userData = {
-          clerkId: evt.data.id,
-          email: evt.data.email_addresses[0]?.email_address,
-          firstName: evt.data.first_name,
-          lastName: evt.data.last_name,
-          avatar: evt.data.profile_image_url,
-          role: evt.data.unsafe_metadata?.role || evt.data.public_metadata?.role
+        // Enhanced data extraction with multiple fallbacks
+        const extractUserData = (data) => {
+          // Try multiple sources for email
+          const email = data.email_addresses?.[0]?.email_address || 
+                       data.primary_email_address_id && 
+                       data.email_addresses?.find(ea => ea.id === data.primary_email_address_id)?.email_address ||
+                       data.email
+
+          // Try multiple sources for names with better fallbacks
+          const firstName = data.first_name || 
+                           data.given_name || 
+                           (data.username ? data.username.split(' ')[0] : null) ||
+                           'User'
+          
+          const lastName = data.last_name || 
+                          data.family_name || 
+                          (data.username && data.username.includes(' ') ? 
+                           data.username.split(' ').slice(1).join(' ') : '') ||
+                          ''
+
+          // Try multiple sources for avatar
+          const avatar = data.profile_image_url || 
+                        data.image_url || 
+                        data.profile_pic_url ||
+                        data.avatar_url
+
+          // Try multiple sources for role
+          const role = data.unsafe_metadata?.role || 
+                      data.public_metadata?.role || 
+                      data.private_metadata?.role ||
+                      data.role
+
+          return {
+            clerkId: data.id,
+            email,
+            firstName,
+            lastName,
+            avatar,
+            role
+          }
         }
 
+        const userData = extractUserData(evt.data)
+        
+        // Validate essential data
+        if (!userData.clerkId) {
+          console.error('No clerk ID found in webhook data:', evt.data)
+          return new Response('Invalid user data - missing clerk ID', { status: 400 })
+        }
+
+        if (!userData.email) {
+          console.error('No email found in webhook data:', evt.data)
+          return new Response('Invalid user data - missing email', { status: 400 })
+        }
+
+        console.log('Webhook userData:', userData)
         await syncUser(userData)
         console.log(`User ${eventType} successfully synced to database`)
         break
@@ -81,6 +128,7 @@ export async function POST(req) {
     return new Response('', { status: 200 })
   } catch (error) {
     console.error('Error handling webhook:', error)
-    return new Response('Error handling webhook', { status: 500 })
+    console.error('Webhook event data:', evt.data)
+    return new Response(`Error handling webhook: ${error.message}`, { status: 500 })
   }
 }

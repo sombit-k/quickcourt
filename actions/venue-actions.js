@@ -549,3 +549,187 @@ export async function getAvailableLocations() {
     return []
   }
 }
+
+export async function getTopRatedVenues(limit = 4) {
+  try {
+    const facilities = await db.facility.findMany({
+      where: {
+        status: 'APPROVED',
+        isActive: true
+      },
+      include: {
+        courts: {
+          where: {
+            isActive: true
+          },
+          select: {
+            id: true,
+            pricePerHour: true,
+            sportType: true
+          }
+        },
+        _count: {
+          select: {
+            reviews: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          rating: 'desc'
+        },
+        {
+          totalReviews: 'desc'
+        }
+      ],
+      take: limit
+    })
+
+    // Transform the data for the frontend
+    const transformedVenues = facilities.map((facility) => {
+      // Get unique sport types
+      const sportsTypes = [...new Set(facility.courts.map(court => court.sportType))]
+      
+      // Get the minimum price from all courts
+      const minPrice = facility.courts.length > 0 
+        ? Math.min(...facility.courts.map(court => court.pricePerHour))
+        : 0
+
+      // Get a court ID for booking (preferably the cheapest one)
+      const bookingCourtId = facility.courts.length > 0 
+        ? facility.courts.find(court => court.pricePerHour === minPrice)?.id
+        : null
+
+      // Parse sports types from JSON if it's a string
+      let facilitySports = []
+      try {
+        facilitySports = JSON.parse(facility.sportsTypes || '[]')
+      } catch {
+        facilitySports = sportsTypes
+      }
+
+      // Generate a color based on the first sport type
+      const getColorForSport = (sport) => {
+        const colorMap = {
+          'badminton': 'from-blue-600 to-purple-600',
+          'tennis': 'from-green-500 to-teal-600',
+          'basketball': 'from-orange-500 to-red-600',
+          'football': 'from-purple-500 to-pink-600',
+          'cricket': 'from-yellow-500 to-orange-600',
+          'swimming': 'from-blue-400 to-blue-600',
+          'table tennis': 'from-indigo-500 to-purple-600',
+          'boxing': 'from-red-500 to-pink-500'
+        }
+        
+        const sportKey = sport?.toLowerCase().replace(/\s+/g, ' ')
+        return colorMap[sportKey] || 'from-gray-500 to-gray-600'
+      }
+
+      const primarySport = facilitySports[0] || sportsTypes[0] || 'Sports'
+      
+      return {
+        id: facility.id,
+        name: facility.name,
+        rating: facility.rating || 0,
+        reviews: facility._count.reviews,
+        location: `${facility.city}, ${facility.state}`,
+        address: facility.address,
+        price: minPrice > 0 ? `₹${minPrice}/hr` : 'Contact for pricing',
+        sports: facilitySports.length > 0 ? facilitySports : sportsTypes,
+        color: getColorForSport(primarySport),
+        bookingCourtId,
+        description: facility.description,
+        totalCourts: facility.courts.length
+      }
+    })
+
+    return transformedVenues
+  } catch (error) {
+    console.error('Error fetching top rated venues:', error)
+    return []
+  }
+}
+
+export async function getFeaturedVenues() {
+  try {
+    // Get venues with at least some ratings and active courts
+    const facilities = await db.facility.findMany({
+      where: {
+        status: 'APPROVED',
+        isActive: true,
+        courts: {
+          some: {
+            isActive: true
+          }
+        }
+      },
+      include: {
+        courts: {
+          where: {
+            isActive: true
+          },
+          select: {
+            id: true,
+            pricePerHour: true,
+            sportType: true,
+            name: true
+          }
+        },
+        _count: {
+          select: {
+            reviews: true,
+            bookings: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          rating: 'desc'
+        },
+        {
+          totalReviews: 'desc'
+        },
+        {
+          createdAt: 'desc'
+        }
+      ],
+      take: 8
+    })
+
+    return facilities.map((facility) => {
+      const sportsTypes = [...new Set(facility.courts.map(court => court.sportType))]
+      const minPrice = facility.courts.length > 0 
+        ? Math.min(...facility.courts.map(court => court.pricePerHour))
+        : 0
+      const bookingCourtId = facility.courts.length > 0 
+        ? facility.courts.find(court => court.pricePerHour === minPrice)?.id
+        : null
+
+      let facilitySports = []
+      try {
+        facilitySports = JSON.parse(facility.sportsTypes || '[]')
+      } catch {
+        facilitySports = sportsTypes
+      }
+
+      return {
+        id: facility.id,
+        name: facility.name,
+        rating: facility.rating || 0,
+        reviews: facility._count.reviews,
+        totalBookings: facility._count.bookings,
+        location: `${facility.city}, ${facility.state}`,
+        address: facility.address,
+        price: minPrice > 0 ? `₹${minPrice}/hr` : 'Contact for pricing',
+        sports: facilitySports.length > 0 ? facilitySports : sportsTypes,
+        bookingCourtId,
+        description: facility.description,
+        totalCourts: facility.courts.length,
+        courts: facility.courts
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching featured venues:', error)
+    return []
+  }
+}
