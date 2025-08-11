@@ -24,7 +24,11 @@ import {
   Calendar,
   DollarSign,
   Eye,
-  Settings
+  Settings,
+  TrendingUp,
+  Activity,
+  CalendarDays,
+  IndianRupee
 } from 'lucide-react'
 
 export default function FacilityManagementPage() {
@@ -35,6 +39,14 @@ export default function FacilityManagementPage() {
   const [userRole, setUserRole] = useState(null)
   const [deletingFacility, setDeletingFacility] = useState(null)
   const [deletingCourt, setDeletingCourt] = useState(null)
+  const [dashboardData, setDashboardData] = useState({
+    totalBookings: 0,
+    activeCourts: 0,
+    totalEarnings: 0,
+    monthlyEarnings: 0,
+    upcomingBookings: []
+  })
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   // Check user role and fetch facilities
   useEffect(() => {
@@ -74,11 +86,38 @@ export default function FacilityManagementPage() {
       setIsLoading(true)
       const data = await getFacilitiesByOwner()
       setFacilities(data)
+      await fetchDashboardData(data)
     } catch (error) {
       console.error('Error fetching facilities:', error)
       toast.error('Failed to load facilities')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchDashboardData = async (facilitiesData) => {
+    try {
+      const response = await fetch('/api/facility/dashboard')
+      if (response.ok) {
+        const data = await response.json()
+        setDashboardData(data)
+      } else {
+        // Calculate basic metrics from facilities data as fallback
+        const activeCourts = facilitiesData.reduce((sum, facility) => 
+          sum + (facility.courts?.filter(court => court.isActive)?.length || 0), 0
+        )
+        const totalBookings = facilitiesData.reduce((sum, facility) => 
+          sum + (facility._count?.bookings || 0), 0
+        )
+        
+        setDashboardData(prev => ({
+          ...prev,
+          activeCourts,
+          totalBookings
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
     }
   }
 
@@ -173,6 +212,24 @@ export default function FacilityManagementPage() {
     }
   }
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const formatDate = (date) => {
+    return new Intl.DateTimeFormat('en-IN', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date))
+  }
+
   if (!isLoaded || userRole === null) {
     return (
       <div className="min-h-screen flex items-center justify-center py-50">
@@ -215,6 +272,127 @@ export default function FacilityManagementPage() {
             Add New Facility
           </Button>
         </div>
+
+        {/* Dashboard Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                  <p className="text-2xl font-bold text-gray-900">{dashboardData.totalBookings}</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <span className="text-green-600">+12% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Courts</p>
+                  <p className="text-2xl font-bold text-gray-900">{dashboardData.activeCourts}</p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-gray-600">Across {facilities.length} facilities</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardData.monthlyEarnings)}</p>
+                </div>
+                <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <IndianRupee className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <span className="text-green-600">+8% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardData.totalEarnings)}</p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-gray-600">All time revenue</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Booking Calendar */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              Upcoming Bookings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dashboardData.upcomingBookings.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">No upcoming bookings</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {dashboardData.upcomingBookings.slice(0, 5).map((booking, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{booking.court?.name}</h4>
+                        <p className="text-sm text-gray-600">{booking.facility?.name}</p>
+                        <p className="text-sm text-gray-500">{formatDate(booking.date)} - {booking.timeSlot}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">{formatCurrency(booking.totalAmount)}</p>
+                      <Badge variant={booking.status === 'CONFIRMED' ? 'default' : 'secondary'}>
+                        {booking.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {dashboardData.upcomingBookings.length > 5 && (
+                  <div className="text-center pt-4">
+                    <Button variant="outline" onClick={() => router.push('/facility/bookings')}>
+                      View All Bookings ({dashboardData.upcomingBookings.length})
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Facilities List */}
         {facilities.length === 0 ? (

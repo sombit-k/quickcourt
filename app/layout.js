@@ -20,26 +20,22 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider
-      appearance={{
-        elements: {
-          formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
-        }
-      }}
+      // signUpMode="standard"
+      // signInMode="standard"
+      // appearance={{
+      //   elements: {
+      //     formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
+      //   }
+      // }}
     >
       <html lang="en">
-        <body className={`${inter.className} antialiased  `}>
-          <div id="clerk-captcha" style={{display: 'none'}}></div>
-          
+        <body className={`${inter.className} antialiased`}>
           <UserSync />
-          
           <NavbarDemo />
-
-          <main className="min-h-screen   ">
+          <main className="min-h-screen">
             {children}
           </main>
-          {/* footer */}
           <Footer />
-          
           <Toaster />
         </body>
       </html>

@@ -11,6 +11,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select'
 import { Plus, Trash2, Clock, MapPin, Phone, Mail, Globe, Star } from 'lucide-react'
 
 export default function NewFacilityPage() {
@@ -18,6 +25,26 @@ export default function NewFacilityPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [userRole, setUserRole] = useState(null)
+
+  // Available sports types
+  const sportsTypeOptions = [
+    'Badminton',
+    'Tennis',
+    'Basketball',
+    'Cricket',
+    'Football',
+    'Volleyball',
+    'Table Tennis',
+    'Squash',
+    'Swimming',
+    'Boxing',
+    'Martial Arts',
+    'Fitness/Gym',
+    'Yoga',
+    'Pickleball',
+    'Padel',
+    'Other'
+  ]
 
   // Form state
   const [facilityData, setFacilityData] = useState({
@@ -33,11 +60,13 @@ export default function NewFacilityPage() {
   })
 
   const [sportsTypes, setSportsTypes] = useState([''])
+  const [customSportsTypes, setCustomSportsTypes] = useState(['']) // For facility-level custom sports
   const [amenities, setAmenities] = useState([''])
   const [images, setImages] = useState([''])
   const [courts, setCourts] = useState([{
     name: '',
     sportType: '',
+    customSportType: '', // For court-level custom sport
     pricePerHour: '',
     description: '',
     images: ['']
@@ -107,6 +136,54 @@ export default function NewFacilityPage() {
     setter(array.filter((_, i) => i !== index))
   }
 
+  // Special remove function for facility sports that also removes custom sports
+  const removeFacilitySportType = (index) => {
+    setSportsTypes(sportsTypes.filter((_, i) => i !== index))
+    setCustomSportsTypes(customSportsTypes.filter((_, i) => i !== index))
+  }
+
+  // Special add function for facility sports that also adds to custom sports
+  const addFacilitySportType = () => {
+    setSportsTypes([...sportsTypes, ''])
+    setCustomSportsTypes([...customSportsTypes, ''])
+  }
+
+  // Special handler for facility sports types with "Other" support
+  const handleFacilitySportTypeChange = (index, value) => {
+    if (value === 'Other') {
+      // Keep the "Other" selection and initialize custom sport type
+      handleArrayChange(index, value, sportsTypes, setSportsTypes)
+      const newCustomSports = [...customSportsTypes]
+      newCustomSports[index] = ''
+      setCustomSportsTypes(newCustomSports)
+    } else {
+      // Clear any custom sport type for this index
+      handleArrayChange(index, value, sportsTypes, setSportsTypes)
+      const newCustomSports = [...customSportsTypes]
+      newCustomSports[index] = ''
+      setCustomSportsTypes(newCustomSports)
+    }
+  }
+
+  // Handler for custom sport type input
+  const handleCustomSportTypeChange = (index, value) => {
+    const newCustomSports = [...customSportsTypes]
+    newCustomSports[index] = value
+    setCustomSportsTypes(newCustomSports)
+  }
+
+  // Special handler for court sport types with "Other" support
+  const handleCourtSportTypeChange = (courtIndex, value) => {
+    const newCourts = [...courts]
+    newCourts[courtIndex].sportType = value
+    if (value === 'Other') {
+      newCourts[courtIndex].customSportType = ''
+    } else {
+      newCourts[courtIndex].customSportType = ''
+    }
+    setCourts(newCourts)
+  }
+
   const handleCourtChange = (courtIndex, field, value) => {
     const newCourts = [...courts]
     newCourts[courtIndex] = {
@@ -131,6 +208,7 @@ export default function NewFacilityPage() {
     setCourts([...courts, {
       name: '',
       sportType: '',
+      customSportType: '',
       pricePerHour: '',
       description: '',
       images: ['']
@@ -164,15 +242,36 @@ export default function NewFacilityPage() {
       }
 
       // Validate courts
-      const validCourts = courts.filter(court => 
-        court.name && court.sportType && court.pricePerHour
-      )
+      const validCourts = courts.filter(court => {
+        const hasValidSportType = court.sportType === 'Other' 
+          ? court.customSportType && court.customSportType.trim()
+          : court.sportType && court.sportType.trim()
+        
+        return court.name && hasValidSportType && court.pricePerHour
+      })
 
       if (validCourts.length === 0) {
         toast.error('Please add at least one valid court')
         setIsLoading(false)
         return
       }
+
+      // Process sports types (combine regular selections with custom ones)
+      const processedSportsTypes = sportsTypes.map((sport, index) => {
+        if (sport === 'Other' && customSportsTypes[index]) {
+          return customSportsTypes[index].trim()
+        }
+        return sport
+      }).filter(s => s.trim())
+
+      // Process courts (use custom sport type if "Other" is selected)
+      const processedCourts = validCourts.map(court => ({
+        ...court,
+        sportType: court.sportType === 'Other' && court.customSportType 
+          ? court.customSportType.trim() 
+          : court.sportType,
+        images: court.images.filter(img => img.trim())
+      }))
 
       // Prepare form data
       const formData = new FormData()
@@ -183,14 +282,11 @@ export default function NewFacilityPage() {
       })
 
       // Add JSON data
-      formData.append('sportsTypes', JSON.stringify(sportsTypes.filter(s => s.trim())))
+      formData.append('sportsTypes', JSON.stringify(processedSportsTypes))
       formData.append('amenities', JSON.stringify(amenities.filter(a => a.trim())))
       formData.append('images', JSON.stringify(images.filter(img => img.trim())))
       formData.append('operatingHours', JSON.stringify(operatingHours))
-      formData.append('courts', JSON.stringify(validCourts.map(court => ({
-        ...court,
-        images: court.images.filter(img => img.trim())
-      }))))
+      formData.append('courts', JSON.stringify(processedCourts))
 
       const result = await createFacility(formData)
 
@@ -362,28 +458,48 @@ export default function NewFacilityPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Sports Types</h3>
                 {sportsTypes.map((sport, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={sport}
-                      onChange={(e) => handleArrayChange(index, e.target.value, sportsTypes, setSportsTypes)}
-                      placeholder="e.g., Badminton, Tennis, Basketball"
-                    />
-                    {sportsTypes.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => removeArrayItem(index, sportsTypes, setSportsTypes)}
+                  <div key={index} className="space-y-2">
+                    <div className="flex gap-2">
+                      <Select
+                        value={sport}
+                        onValueChange={(value) => handleFacilitySportTypeChange(index, value)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a sport type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sportsTypeOptions.map((sportOption) => (
+                            <SelectItem key={sportOption} value={sportOption}>
+                              {sportOption}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {sportsTypes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeFacilitySportType(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {sport === 'Other' && (
+                      <Input
+                        value={customSportsTypes[index] || ''}
+                        onChange={(e) => handleCustomSportTypeChange(index, e.target.value)}
+                        placeholder="Enter custom sport type"
+                        className="ml-0"
+                      />
                     )}
                   </div>
                 ))}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => addArrayItem(sportsTypes, setSportsTypes)}
+                  onClick={addFacilitySportType}
                   className="w-full"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -536,11 +652,29 @@ export default function NewFacilityPage() {
                       
                       <div>
                         <Label>Sport Type *</Label>
-                        <Input
+                        <Select
                           value={court.sportType}
-                          onChange={(e) => handleCourtChange(courtIndex, 'sportType', e.target.value)}
-                          placeholder="e.g., Badminton, Tennis"
-                        />
+                          onValueChange={(value) => handleCourtSportTypeChange(courtIndex, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a sport type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sportsTypeOptions.map((sport) => (
+                              <SelectItem key={sport} value={sport}>
+                                {sport}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {court.sportType === 'Other' && (
+                          <Input
+                            value={court.customSportType}
+                            onChange={(e) => handleCourtChange(courtIndex, 'customSportType', e.target.value)}
+                            placeholder="Enter custom sport type"
+                            className="mt-2"
+                          />
+                        )}
                       </div>
                       
                       <div>

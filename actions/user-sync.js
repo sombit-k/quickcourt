@@ -76,7 +76,7 @@ export async function syncUser(userInput) {
       }
     })
 
-    //database was error generated here
+    //database error was fixed here
     if (existingUser) {
       const updatedUser = await db.user.update({
         where: { id: existingUser.id },

@@ -10,7 +10,6 @@ import { VortexDemo } from "@/components/call-to-action";
 import { WavyBackground } from "@/components/ui/wavy-background";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { Meteors } from "@/components/ui/meteors";
-import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect";
 import { Search, MapPin, Star, ChevronLeft, ChevronRight, Users, Trophy, Clock, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { getTopRatedVenues } from '@/actions/venue-actions'
@@ -228,7 +227,7 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden pt-15">
+    <div className="min-h-screen bg-white overflow-hidden pt-20">
       {/* Hero Section with Vortex Background */}
       <section className="relative h-screen bg-gradient-to-br from-gray-50 to-white">
         <VortexDemo />
