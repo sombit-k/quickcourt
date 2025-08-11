@@ -13,10 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { 
   ArrowLeft, 
   Calendar,
-  Clock, 
   MapPin, 
   Phone, 
-  Mail, 
   Star,
   Loader2,
   CreditCard,

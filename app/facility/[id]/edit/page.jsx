@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
-import { createFacility } from '@/actions/facility-actions'
+import { updateFacility, getFacilityById } from '@/actions/facility-actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,12 +11,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Trash2, Clock, MapPin, Phone, Mail, Globe, Star } from 'lucide-react'
+import { Plus, Trash2, Clock, MapPin, ArrowLeft } from 'lucide-react'
 
-export default function NewFacilityPage() {
+export default function EditFacilityPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
+  const params = useParams()
+  const facilityId = params.id
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const [userRole, setUserRole] = useState(null)
 
   // Form state
@@ -35,13 +38,6 @@ export default function NewFacilityPage() {
   const [sportsTypes, setSportsTypes] = useState([''])
   const [amenities, setAmenities] = useState([''])
   const [images, setImages] = useState([''])
-  const [courts, setCourts] = useState([{
-    name: '',
-    sportType: '',
-    pricePerHour: '',
-    description: '',
-    images: ['']
-  }])
 
   const [operatingHours, setOperatingHours] = useState({
     monday: { open: '09:00', close: '22:00', closed: false },
@@ -53,13 +49,13 @@ export default function NewFacilityPage() {
     sunday: { open: '08:00', close: '23:00', closed: false }
   })
 
-  // Check user role on component mount
+  // Check user role and load facility data
   useEffect(() => {
-    const checkUserRole = async () => {
+    const checkUserAndLoadFacility = async () => {
       if (!isLoaded) return
       
       if (!user) {
-        toast.error('You must be logged in to access this page')
+        toast.error('You must be logged in to edit facilities')
         router.push('/venue')
         return
       }
@@ -69,12 +65,13 @@ export default function NewFacilityPage() {
         const userData = await response.json()
         
         if (userData.role !== 'FACILITY_OWNER') {
-          toast.error('You must be a facility owner to create venues')
+          toast.error('You must be a facility owner to edit facilities')
           router.push('/venue')
           return
         }
         
         setUserRole(userData.role)
+        await loadFacilityData()
       } catch (error) {
         console.error('Error checking user role:', error)
         toast.error('Error verifying permissions')
@@ -82,8 +79,78 @@ export default function NewFacilityPage() {
       }
     }
 
-    checkUserRole()
-  }, [user, isLoaded, router])
+    checkUserAndLoadFacility()
+  }, [user, isLoaded, router, facilityId])
+
+  const loadFacilityData = async () => {
+    try {
+      setIsLoadingData(true)
+      const facility = await getFacilityById(facilityId)
+      
+      if (!facility) {
+        toast.error('Facility not found')
+        router.push('/facility')
+        return
+      }
+
+      // Set basic facility data
+      setFacilityData({
+        name: facility.name || '',
+        description: facility.description || '',
+        address: facility.address || '',
+        city: facility.city || '',
+        state: facility.state || '',
+        zipCode: facility.zipCode || '',
+        phone: facility.phone || '',
+        email: facility.email || '',
+        website: facility.website || ''
+      })
+
+      // Parse JSON fields
+      try {
+        const parsedSportsTypes = JSON.parse(facility.sportsTypes || '[]')
+        setSportsTypes(parsedSportsTypes.length > 0 ? parsedSportsTypes : [''])
+      } catch {
+        setSportsTypes([''])
+      }
+
+      try {
+        const parsedAmenities = JSON.parse(facility.amenities || '[]')
+        setAmenities(parsedAmenities.length > 0 ? parsedAmenities : [''])
+      } catch {
+        setAmenities([''])
+      }
+
+      try {
+        const parsedImages = JSON.parse(facility.images || '[]')
+        setImages(parsedImages.length > 0 ? parsedImages : [''])
+      } catch {
+        setImages([''])
+      }
+
+      try {
+        const parsedHours = JSON.parse(facility.operatingHours || '{}')
+        setOperatingHours({
+          monday: parsedHours.monday || { open: '09:00', close: '22:00', closed: false },
+          tuesday: parsedHours.tuesday || { open: '09:00', close: '22:00', closed: false },
+          wednesday: parsedHours.wednesday || { open: '09:00', close: '22:00', closed: false },
+          thursday: parsedHours.thursday || { open: '09:00', close: '22:00', closed: false },
+          friday: parsedHours.friday || { open: '09:00', close: '22:00', closed: false },
+          saturday: parsedHours.saturday || { open: '08:00', close: '23:00', closed: false },
+          sunday: parsedHours.sunday || { open: '08:00', close: '23:00', closed: false }
+        })
+      } catch {
+        // Keep default hours
+      }
+
+    } catch (error) {
+      console.error('Error loading facility:', error)
+      toast.error('Failed to load facility data')
+      router.push('/facility')
+    } finally {
+      setIsLoadingData(false)
+    }
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -105,40 +172,6 @@ export default function NewFacilityPage() {
 
   const removeArrayItem = (index, array, setter) => {
     setter(array.filter((_, i) => i !== index))
-  }
-
-  const handleCourtChange = (courtIndex, field, value) => {
-    const newCourts = [...courts]
-    newCourts[courtIndex] = {
-      ...newCourts[courtIndex],
-      [field]: value
-    }
-    setCourts(newCourts)
-  }
-
-  const handleCourtImageChange = (courtIndex, imageIndex, value) => {
-    const newCourts = [...courts]
-    const newImages = [...newCourts[courtIndex].images]
-    newImages[imageIndex] = value
-    newCourts[courtIndex] = {
-      ...newCourts[courtIndex],
-      images: newImages
-    }
-    setCourts(newCourts)
-  }
-
-  const addCourt = () => {
-    setCourts([...courts, {
-      name: '',
-      sportType: '',
-      pricePerHour: '',
-      description: '',
-      images: ['']
-    }])
-  }
-
-  const removeCourt = (index) => {
-    setCourts(courts.filter((_, i) => i !== index))
   }
 
   const handleOperatingHoursChange = (day, field, value) => {
@@ -163,17 +196,6 @@ export default function NewFacilityPage() {
         return
       }
 
-      // Validate courts
-      const validCourts = courts.filter(court => 
-        court.name && court.sportType && court.pricePerHour
-      )
-
-      if (validCourts.length === 0) {
-        toast.error('Please add at least one valid court')
-        setIsLoading(false)
-        return
-      }
-
       // Prepare form data
       const formData = new FormData()
       
@@ -187,29 +209,25 @@ export default function NewFacilityPage() {
       formData.append('amenities', JSON.stringify(amenities.filter(a => a.trim())))
       formData.append('images', JSON.stringify(images.filter(img => img.trim())))
       formData.append('operatingHours', JSON.stringify(operatingHours))
-      formData.append('courts', JSON.stringify(validCourts.map(court => ({
-        ...court,
-        images: court.images.filter(img => img.trim())
-      }))))
 
-      const result = await createFacility(formData)
+      const result = await updateFacility(facilityId, formData)
 
       if (result.success) {
         toast.success(result.message)
-        router.push('/venue')
+        router.push('/facility')
       } else {
         toast.error(result.message)
       }
     } catch (error) {
-      console.error('Error creating facility:', error)
-      toast.error('An error occurred while creating the facility')
+      console.error('Error updating facility:', error)
+      toast.error('An error occurred while updating the facility')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Show loading or check permissions
-  if (!isLoaded || userRole === null) {
+  // Show loading states
+  if (!isLoaded || userRole === null || isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -222,13 +240,25 @@ export default function NewFacilityPage() {
       <div className="max-w-4xl mx-auto px-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold flex items-center gap-2">
-              <MapPin className="h-6 w-6" />
-              Create New Venue
-            </CardTitle>
-            <p className="text-gray-600">
-              Fill in the details to create your sports facility. Your venue will be reviewed before going live.
-            </p>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/facility')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Facilities
+              </Button>
+              <div>
+                <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                  <MapPin className="h-6 w-6" />
+                  Edit Facility
+                </CardTitle>
+                <p className="text-gray-600">
+                  Update your facility information. Changes will be reviewed before going live.
+                </p>
+              </div>
+            </div>
           </CardHeader>
           
           <CardContent>
@@ -294,7 +324,7 @@ export default function NewFacilityPage() {
                       name="website"
                       value={facilityData.website}
                       onChange={handleInputChange}
-                      placeholder="https://google.com"
+                      placeholder="https://your-website.com"
                     />
                   </div>
                 </div>
@@ -505,129 +535,21 @@ export default function NewFacilityPage() {
 
               <Separator />
 
-              {/* Courts */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Courts</h3>
-                {courts.map((court, courtIndex) => (
-                  <Card key={courtIndex} className="p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium">Court {courtIndex + 1}</h4>
-                      {courts.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeCourt(courtIndex)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <Label>Court Name *</Label>
-                        <Input
-                          value={court.name}
-                          onChange={(e) => handleCourtChange(courtIndex, 'name', e.target.value)}
-                          placeholder="e.g., Court A, Main Court"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Sport Type *</Label>
-                        <Input
-                          value={court.sportType}
-                          onChange={(e) => handleCourtChange(courtIndex, 'sportType', e.target.value)}
-                          placeholder="e.g., Badminton, Tennis"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Price per Hour *</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={court.pricePerHour}
-                          onChange={(e) => handleCourtChange(courtIndex, 'pricePerHour', e.target.value)}
-                          placeholder="Enter price"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <Label>Court Description</Label>
-                      <Textarea
-                        value={court.description}
-                        onChange={(e) => handleCourtChange(courtIndex, 'description', e.target.value)}
-                        placeholder="Describe this court"
-                        rows={2}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Court Images</Label>
-                      {court.images.map((image, imageIndex) => (
-                        <div key={imageIndex} className="flex gap-2 mb-2">
-                          <Input
-                            value={image}
-                            onChange={(e) => handleCourtImageChange(courtIndex, imageIndex, e.target.value)}
-                            placeholder="Enter image URL"
-                          />
-                          {court.images.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                const newCourts = [...courts]
-                                newCourts[courtIndex].images = court.images.filter((_, i) => i !== imageIndex)
-                                setCourts(newCourts)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newCourts = [...courts]
-                          newCourts[courtIndex].images.push('')
-                          setCourts(newCourts)
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Image
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-                
-                <Button
+              {/* Submit */}
+              <div className="flex justify-end gap-4">
+                <Button 
                   type="button"
                   variant="outline"
-                  onClick={addCourt}
-                  className="w-full"
+                  onClick={() => router.push('/facility')}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Court
+                  Cancel
                 </Button>
-              </div>
-
-              <Separator />
-
-              {/* Submit */}
-              <div className="flex justify-end">
                 <Button 
                   type="submit" 
                   disabled={isLoading}
                   className="min-w-32"
                 >
-                  {isLoading ? 'Creating...' : 'Create Facility'}
+                  {isLoading ? 'Updating...' : 'Update Facility'}
                 </Button>
               </div>
             </form>
