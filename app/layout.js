@@ -1,6 +1,6 @@
 import { inter } from "@/app/ui/font"
 import { NavbarDemo } from "@/app/ui/navbar";
-// import Footer from "@/components/footer";
+import Footer from "@/components/footer";
 import UserSync from "@/components/user-sync";
 import "./globals.css";
 import {
@@ -37,8 +37,8 @@ export default function RootLayout({ children }) {
           <main className="min-h-screen   ">
             {children}
           </main>
-          {/* footer
-          <Footer /> */}
+          {/* footer */}
+          <Footer />
 
         </body>
       </html>
