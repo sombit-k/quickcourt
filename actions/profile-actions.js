@@ -29,7 +29,6 @@ export async function updateUserProfile(formData) {
       throw new Error('Please enter a valid phone number')
     }
 
-    
     // Update user in database
     const updatedUser = await db.user.upsert({
       where: { clerkId: user.id },
@@ -66,38 +65,37 @@ export async function updateUserProfile(formData) {
   }
 }
 
-export async function changePassword(formData) {
+export async function getCurrentUserBookings() {
   try {
     const user = await currentUser()
     if (!user) {
       throw new Error('User not authenticated')
     }
 
-    const oldPassword = formData.get('oldPassword')
-    const newPassword = formData.get('newPassword')
-    const confirmPassword = formData.get('confirmPassword')
+    const userBookings = await db.booking.findMany({
+      where: {
+        user: {
+          clerkId: user.id
+        }
+      },
+      include: {
+        facility: true,
+        court: true
+      },
+      orderBy: {
+        bookingDate: 'desc'
+      }
+    })
 
-    // Validation
-    if (!oldPassword) {
-      throw new Error('Current password is required')
-    }
-    if (!newPassword || newPassword.length < 8) {
-      throw new Error('New password must be at least 8 characters')
-    }
-    if (newPassword !== confirmPassword) {
-      throw new Error('New passwords do not match')
-    }
-
-    
-    return { 
-      success: false, 
-      message: 'Password changes must be done through your account settings' 
+    return {
+      success: true,
+      bookings: userBookings
     }
   } catch (error) {
-    console.error('Error changing password:', error)
-    return { 
-      success: false, 
-      message: error.message || 'Failed to change password' 
+    console.error('Error fetching user bookings:', error)
+    return {
+      success: false,
+      message: 'Failed to fetch bookings'
     }
   }
 }

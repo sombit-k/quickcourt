@@ -36,24 +36,24 @@ function validateAndNormalizeUserData(userData) {
   }
 }
 
-export async function syncUser(userInput) {
+export async function syncUser(userData) {
   try {
-    console.log('Syncing user:', userInput)
+    console.log('Syncing user:', userData)
     
     // Simple validation
-    if (!userInput?.clerkId || !userInput?.email) {
+    if (!userData?.clerkId || !userData?.email) {
       throw new Error('Missing required user data')
     }
     
     // Clean the data
     const cleanData = {
-      clerkId: userInput.clerkId,
-      email: userInput.email,
-      firstName: userInput.firstName || 'User',
-      lastName: userInput.lastName || '',
-      fullName: userInput.fullName || `${userInput.firstName || 'User'} ${userInput.lastName || ''}`.trim(),
-      avatar: userInput.avatar || userInput.profileImage || null,
-      role: userInput.role || 'USER'
+      clerkId: userData.clerkId,
+      email: userData.email,
+      firstName: userData.firstName || 'User',
+      lastName: userData.lastName || '',
+      fullName: userData.fullName || `${userData.firstName || 'User'} ${userData.lastName || ''}`.trim(),
+      avatar: userData.avatar || userData.profileImage || null,
+      role: userData.role || 'USER'
     }
 
     // Map role to enum
@@ -66,22 +66,15 @@ export async function syncUser(userInput) {
     }
     const mappedRole = roleMap[cleanData.role?.toLowerCase()] || 'USER'
 
-    // Check if user exists by clerkId OR email
-    const existingUser = await db.user.findFirst({
-      where: {
-        OR: [
-          { clerkId: cleanData.clerkId },
-          { email: cleanData.email }
-        ]
-      }
+    // Check if user exists by clerkId
+    const existingUser = await db.user.findUnique({
+      where: { clerkId: cleanData.clerkId }
     })
 
-    //database error was fixed here
     if (existingUser) {
       const updatedUser = await db.user.update({
         where: { id: existingUser.id },
         data: {
-          clerkId: cleanData.clerkId,
           email: cleanData.email,
           firstName: cleanData.firstName,
           lastName: cleanData.lastName,
