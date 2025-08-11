@@ -327,9 +327,9 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {/* <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Premium Venues
-              </span>
+              </span> */}
             </h2>
             <Link href="/app/main/venue">
               <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
