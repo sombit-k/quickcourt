@@ -19,15 +19,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider
-      // signUpMode="standard"
-      // signInMode="standard"
-      // appearance={{
-      //   elements: {
-      //     formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
-      //   }
-      // }}
-    >
+    <ClerkProvider>
       <html lang="en">
         <body className={`${inter.className} antialiased`}>
           <UserSync />

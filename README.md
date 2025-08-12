@@ -10,6 +10,7 @@ A comprehensive sports facility booking platform built with Next.js, featuring a
 - **💳 Payment Integration**: Fake payment gateway with multiple payment methods
 - **🔄 Queue System**: Advanced booking queue for handling concurrent requests
 - **👥 Role Management**: Secure role-based access control with admin approval
+- **⭐ Review System**: Users can review facilities after completing bookings
 
 ### Advanced Features
 - **⚡ Real-time Conflict Resolution**: Handles multiple users booking the same slot
@@ -150,7 +151,25 @@ if (result.queueInfo.isInQueue) {
 - Role request management
 - Booking oversight and reporting
 
-### 4. Facility Management
+### 4. Review System
+
+**Problem Solved**: Trust and quality assurance for facilities.
+
+**Features**:
+- Only users with completed bookings can review
+- Comprehensive 5-star rating system with comments
+- Anonymous review option
+- Edit and delete own reviews
+- Real-time facility rating updates
+- Admin oversight and review management
+
+**Flow**:
+1. User completes a booking (status: CONFIRMED, payment: PAID)
+2. After booking date passes, review option becomes available
+3. User can write one review per facility
+4. Reviews update facility's average rating automatically
+
+### 5. Facility Management
 
 **For Facility Owners**:
 - Create and manage multiple facilities
@@ -245,6 +264,7 @@ datasource db {
 3. **Handle Conflicts**: If slot taken, join queue automatically
 4. **Complete Payment**: 10-minute window with multiple payment options
 5. **Track Bookings**: View all bookings with status updates
+6. **Write Reviews**: Rate and review facilities after completing bookings
 
 ### For Facility Owners
 1. **Create Facility**: Add venue details, amenities, operating hours
@@ -275,6 +295,21 @@ node test-hackathon-edge-case.js
 node test-role-requests.js
 ```
 
+### Testing the Review System
+
+Run the review system test to verify functionality:
+
+```bash
+# Test review system with current data
+node test-review-system.js
+
+# Create test completed bookings
+node create-test-bookings.js
+
+# Show facility IDs for testing
+node show-facility-ids.js
+```
+
 ### Manual Testing Scenarios
 
 1. **Concurrent Booking Test**:
@@ -292,6 +327,12 @@ node test-role-requests.js
    - Review as admin
    - Verify role change upon approval
 
+4. **Review System Test**:
+   - Complete a booking (set status to CONFIRMED, payment to PAID)
+   - Wait for booking date to pass or set past date
+   - Visit facility page and write review
+   - Verify review appears and updates facility rating
+
 ## 🚦 API Endpoints
 
 ### Authentication
@@ -301,6 +342,12 @@ node test-role-requests.js
 - `GET /api/facility/bookings` - Get facility bookings
 - `POST /api/booking/create` - Create new booking
 - `PUT /api/booking/approve` - Approve booking (facility owners)
+
+### Reviews
+- `POST /api/review/create` - Create new review
+- `PUT /api/review/update` - Update existing review
+- `DELETE /api/review/delete` - Delete review
+- `GET /api/review/facility/[id]` - Get facility reviews
 
 ### Admin
 - `GET /api/admin/stats` - Platform statistics
@@ -332,6 +379,12 @@ npx prisma generate
 - Ensure RoleRequest table exists
 - Check admin role permissions
 - Verify action imports
+
+**5. Review System Issues**
+- Check users have completed bookings (CONFIRMED + PAID)
+- Verify booking dates are in the past
+- Ensure no duplicate reviews per user-facility
+- Check facility rating updates correctly
 
 ### Debug Mode
 

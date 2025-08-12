@@ -27,6 +27,7 @@ import {
 import { getVenueById } from '@/actions/venue-actions'
 import { createBooking, getAvailableTimeSlots } from '@/actions/booking-actions'
 import { createBookingWithQueue } from '@/actions/booking-queue-actions'
+import ReviewSection from '@/components/review-section'
 import Link from 'next/link'
 
 const BookingPage = ({ params }) => {
@@ -492,6 +493,14 @@ const BookingPage = ({ params }) => {
               </Card>
             )}
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12">
+          <ReviewSection 
+            facilityId={venueId} 
+            facilityName={venue.name}
+          />
         </div>
       </div>
     </div>

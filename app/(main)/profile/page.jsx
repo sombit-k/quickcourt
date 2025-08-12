@@ -353,7 +353,7 @@ const ProfilePage = () => {
                               ⚠️ Contact facility to cancel approved booking
                             </div>
                           )}
-                          {booking.isPast && booking.status !== 'CANCELLED' && (
+                          {/* {booking.isPast && booking.status !== 'CANCELLED' && (
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -361,7 +361,7 @@ const ProfilePage = () => {
                             >
                               [Write Review]
                             </Button>
-                          )}
+                          )} */}
                           {booking.isPast && (
                             <div className="ml-auto text-xs text-gray-500">
                               {booking.status === 'CANCELLED' ? 'Booking was cancelled' : 'No cancel booking button for past dates'}

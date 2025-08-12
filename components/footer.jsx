@@ -22,11 +22,11 @@ export default function Footer() {
                 <Shield className="w-4 h-4 text-white" />
               </div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                Support Agent
+                QuickCourt
               </h2>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
-              AI-powered support platform for seamless ticket management and instant customer assistance.
+              QuickCourt
             </p>
           </div>
 

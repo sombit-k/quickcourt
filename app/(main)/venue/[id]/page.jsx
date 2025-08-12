@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
 import { getVenueById } from '@/actions/venue-actions';
+import ReviewSection from '@/components/review-section';
 
 // Dummy data - this will be replaced with dynamic data from the database
 const DUMMY_VENUE_DATA = {
@@ -586,6 +587,14 @@ const VenueDetailPage = ({ params }) => {
               </Card>
             </div>
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+          <ReviewSection 
+            facilityId={venueId} 
+            facilityName={venue?.name || 'This Facility'}
+          />
         </div>
       </div>
     </div>
