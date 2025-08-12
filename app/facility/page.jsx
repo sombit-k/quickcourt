@@ -605,14 +605,14 @@ export default function FacilityManagementPage() {
                         <Settings className="h-4 w-4" />
                         Courts ({facility.courts?.length || 0})
                       </h4>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={() => router.push(`/facility/${facility.id}/courts/new`)}
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add Court
-                      </Button>
+                      </Button> */}
                     </div>
 
                     {facility.courts?.length === 0 ? (
